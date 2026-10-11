@@ -15,7 +15,7 @@ export function renderTokenScreen(container, navigateTo, params = {}) {
     container.innerHTML = `
       <div class="token-screen fade-in">
         <div class="empty-results-box" style="margin-top: 60px;">
-          <div style="color: var(--text-muted); margin-bottom: 8px;">${ICONS.qrCode(48)}</div>
+          <div style="color: var(--text-muted); margin-bottom: 8px;">${ICONS.orders(48)}</div>
           <h3 class="empty-title">Token Not Found</h3>
           <p class="empty-text">No active pass found for reference: ${orderId || 'None'}</p>
           <button type="button" class="btn btn-primary" id="token-err-home-btn" style="margin-top: 8px;">
@@ -117,30 +117,14 @@ export function renderTokenScreen(container, navigateTo, params = {}) {
 
           <!-- Ticket Footer / QR & Metadata -->
           <div class="ticket-footer-strip">
-            <div class="qr-and-meta-row">
-              <div class="ticket-qr-box">
-                <svg width="90" height="90" viewBox="0 0 100 100" fill="currentColor">
-                  <rect x="5" y="5" width="28" height="28" rx="4" fill="#0A0F1D"/>
-                  <rect x="9" y="9" width="20" height="20" rx="2" fill="#FFFFFF"/>
-                  <rect x="14" y="14" width="10" height="10" fill="#0A0F1D"/>
-
-                  <rect x="67" y="5" width="28" height="28" rx="4" fill="#0A0F1D"/>
-                  <rect x="71" y="9" width="20" height="20" rx="2" fill="#FFFFFF"/>
-                  <rect x="76" y="14" width="10" height="10" fill="#0A0F1D"/>
-
-                  <rect x="5" y="67" width="28" height="28" rx="4" fill="#0A0F1D"/>
-                  <rect x="9" y="71" width="20" height="20" rx="2" fill="#FFFFFF"/>
-                  <rect x="14" y="76" width="10" height="10" fill="#0A0F1D"/>
-
-                  <rect x="38" y="10" width="8" height="8" fill="#0A0F1D"/>
-                  <rect x="52" y="15" width="8" height="8" fill="#0A0F1D"/>
-                  <rect x="42" y="42" width="16" height="16" rx="2" fill="#6366F1"/>
-                  <rect x="65" y="42" width="8" height="8" fill="#0A0F1D"/>
-                  <rect x="40" y="68" width="8" height="8" fill="#0A0F1D"/>
-                  <rect x="70" y="68" width="12" height="12" fill="#0A0F1D"/>
-                  <rect x="85" y="85" width="8" height="8" fill="#0A0F1D"/>
-                </svg>
-                <span style="font-size: 8px; font-weight: 800; color: var(--text-muted); margin-top: 2px;">Counter Scan</span>
+            <div class="stamp-and-meta-row">
+              <div class="ticket-stamp-box">
+                <div class="verified-seal-circle">
+                  <span class="seal-icon">✓</span>
+                  <span class="seal-text">VERIFIED</span>
+                </div>
+                <span class="token-pass-tag font-mono">${order.token}</span>
+                <span style="font-size: 8px; font-weight: 800; color: var(--text-muted); margin-top: 2px;">Counter Pass</span>
               </div>
 
               <div class="ticket-meta-details">

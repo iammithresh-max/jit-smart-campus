@@ -29,7 +29,40 @@ export function initStorage() {
   }
   if (!localStorage.getItem(STORAGE_KEYS.ORDERS)) {
     localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(INITIAL_ORDERS));
+  } else {
+    // Migration: Update any legacy demo student reg numbers to the 3 authorized accounts
+    try {
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.ORDERS) || '[]');
+      let updated = false;
+      const migrated = existing.map(o => {
+        if (o.studentRegNo === '21CS042') {
+          updated = true;
+          return { ...o, studentRegNo: '711125104066', studentName: 'Mithresh Kanna S' };
+        }
+        if (o.studentRegNo === '21EC015') {
+          updated = true;
+          return { ...o, studentRegNo: '711125104069', studentName: 'MuthuChellaKumar' };
+        }
+        if (o.studentRegNo === '21ME033') {
+          updated = true;
+          return { ...o, studentRegNo: '711125104114', studentName: 'Udhaya K' };
+        }
+        return o;
+      });
+      if (updated) {
+        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(migrated));
+      }
+    } catch (e) {}
   }
+
+  // Clear legacy sessions if pointing to old default account
+  try {
+    const session = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSION) || 'null');
+    if (session && (session.regNo === '21CS042' || session.regNo === '21EC015' || session.regNo === '21ME033')) {
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
+    }
+  } catch (e) {}
+
   if (!localStorage.getItem(STORAGE_KEYS.TOKEN_COUNTERS)) {
     localStorage.setItem(STORAGE_KEYS.TOKEN_COUNTERS, JSON.stringify({
       canteen: 24,
@@ -199,7 +232,7 @@ export function allocateNextToken(shopType) {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.TOKEN_COUNTERS);
     if (raw) counters = JSON.parse(raw);
-  } catch (e) {}
+  } catch (e) { }
 
   let prefix = 'C';
   if (shopType === 'stationery') prefix = 'S';
@@ -232,7 +265,7 @@ export function computeOrderQueuePosition(orderId) {
   }
 
   // Active uncompleted orders before this order in same shop
-  const sameShopActive = orders.filter(o => 
+  const sameShopActive = orders.filter(o =>
     o.shop === target.shop &&
     o.status !== 'Completed' &&
     o.status !== 'Cancelled'
@@ -298,14 +331,14 @@ export function createVerifiedOrder({ shop, items, printConfig, totalAmount, stu
     updatedAt: new Date().toISOString(),
     payment: {
       method: paymentDetails.method,
-      status: 'VERIFIED',
+      status: paymentDetails.status || (paymentDetails.method === 'Pay on Delivery' ? 'Pay on Delivery' : 'Unverified'),
       txnId: paymentDetails.txnId || `TXN-${Math.random().toString(36).substring(2, 9).toUpperCase()}`,
-      verifiedAt: new Date().toISOString()
+      verifiedAt: paymentDetails.status === 'VERIFIED' ? new Date().toISOString() : null
     },
-    pickupLocation: shop === 'canteen' 
-      ? 'Canteen Counter 1 & 2' 
-      : shop === 'stationery' 
-        ? 'Stationery Dispatch Counter' 
+    pickupLocation: shop === 'canteen'
+      ? 'Canteen Counter 1 & 2'
+      : shop === 'stationery'
+        ? 'Stationery Dispatch Counter'
         : 'Reprographics Center (Printing Room)'
   };
 

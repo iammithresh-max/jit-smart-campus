@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verification Suite</title>
+</head>
+<body>
+  <div id="results" style="font-family: monospace; white-space: pre; padding: 20px;">Running tests...</div>
+
+  <!-- App DOM Shell -->
+  <div class="mobile-viewport" style="display: none;">
+    <div id="mobile-app-screen" class="mobile-app-screen"></div>
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+      <a href="#home" class="nav-item active" id="nav-btn-home" data-screen="home">
+        <div class="nav-icon"></div>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="#canteen" class="nav-item" id="nav-btn-canteen" data-screen="canteen">
+        <div class="nav-icon"></div>
+        <span class="nav-label">Food</span>
+      </a>
+      <a href="#stationery" class="nav-item" id="nav-btn-stationery" data-screen="stationery">
+        <div class="nav-icon"></div>
+        <span class="nav-label">Stationery</span>
+      </a>
+      <a href="#history" class="nav-item" id="nav-btn-history" data-screen="history">
+        <div class="nav-icon"></div>
+        <span class="nav-label">Orders</span>
+      </a>
+      <a href="#profile" class="nav-item" id="nav-btn-profile" data-screen="profile">
+        <div class="nav-icon"></div>
+        <span class="nav-label">Profile</span>
+      </a>
+    </nav>
+    <div id="jit-toast-notification" class="jit-toast"></div>
+  </div>
+
+  <script>
+    window.__ERRORS = [];
+    window.addEventListener('error', function(e) {
+      window.__ERRORS.push(e.message + ' at ' + e.filename + ':' + e.lineno);
+      var res = document.getElementById('results');
+      if (res) res.textContent = 'WINDOW ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+    });
+  </script>
+
+  <script type="module">
+    import { initStorage, getAllOrders, getCartState, saveCartState, clearCart, setSafeSession } from './js/storage.js';
+    import { getCurrentUser } from './js/auth.js';
+    import { navigateTo, getCurrentScreen, setupGlobalNavigationEvents } from './js/app.js';
+
+    const log = [];
+    function assert(desc, condition) {
+      if (condition) {
+        log.push(`[PASS] ${desc}`);
+      } else {
+        log.push(`[FAIL] ${desc}`);
+        console.error(`Assertion failed: ${desc}`);
+      }
+    }
+
+    async function runVerification() {
+      try {
+        log.push("=== START VERIFICATION SUITE ===");
+
+        // 1. Setup Student Session
+        initStorage();
+        const testStudent = {
+          regNo: '711125104066',
+          name: 'Mithresh Kanna S',
+          department: 'Computer Science & Engineering',
+          role: 'student',
+          year: 'III Year'
+        };
+        setSafeSession(testStudent);
+        setupGlobalNavigationEvents();
+        assert("Student session initialized", getCurrentUser() !== null && getCurrentUser().regNo === '711125104066');
+
+        // ==========================================
+        // BUG 1 VERIFICATION: PROFILE BUTTON & SCREEN
+        // ==========================================
+        log.push("\n--- TESTING BUG 1: PROFILE BUTTON & PORTAL ---");
+        
+        // Test navigation event listener exists on #nav-btn-profile
+        const profileBtn = document.getElementById('nav-btn-profile');
+        assert("Profile bottom nav button exists in DOM", profileBtn !== null);
+
+        // Click Profile Button
+        profileBtn.click();
+        assert("Current screen is 'profile'", getCurrentScreen() === 'profile');
+
+        const appScreen = document.getElementById('mobile-app-screen');
+        const profileScreenRoot = appScreen.querySelector('#profile-screen-root');
+        assert("Profile portal screen rendered into #mobile-app-screen", profileScreenRoot !== null);
+
+        // Check verified student info
+        const renderedName = appScreen.querySelector('.profile-student-name, h2, h3');
+        assert("Profile renders student name", renderedName && renderedName.textContent.includes('Mithresh Kanna S'));
+
+        const regNoEl = appScreen.textContent;
+        assert("Profile displays student register number", regNoEl.includes('711125104066'));
+        assert("Profile displays student department", regNoEl.includes('Computer Science'));
+
+        // Check Profile nav button is highlighted
+        assert("Profile nav button has 'active' class", profileBtn.classList.contains('active'));
+        const homeNavBtn = document.getElementById('nav-btn-home');
+        assert("Home nav button does not have 'active' class", !homeNavBtn.classList.contains('active'));
+
+        // Check Back Button in Profile
+        const backBtn = appScreen.querySelector('#profile-back-btn, #btn-profile-back, .btn-back');
+        assert("Profile portal has back button", backBtn !== null);
+        if (backBtn) {
+          backBtn.click();
+          assert("Back button navigates back to 'home'", getCurrentScreen() === 'home');
+        }
+
+        // Re-navigate to profile to test logout
+        navigateTo('profile');
+        const logoutBtn = appScreen.querySelector('#btn-profile-logout-bottom, #profile-quick-logout-btn, #btn-profile-logout-top');
+        assert("Profile portal has logout button", logoutBtn !== null);
+        
+        // Re-establish session for payment tests
+        setSafeSession(testStudent);
+
+        // ==========================================
+        // BUG 2 VERIFICATION: PAYMENT SCREEN & ACTION BAR
+        // ==========================================
+        log.push("\n--- TESTING BUG 2: PAYMENT SCREEN & DYNAMIC ACTION BAR ---");
+
+        // Set up test cart and navigate to payment
+        const cartState = getCartState();
+        cartState.activeShop = 'canteen';
+        cartState.canteenItems = [
+          { id: 'c1', name: 'South Indian Thali', price: 90, category: 'meals', quantity: 2 }
+        ];
+        saveCartState(cartState);
+        assert("Cart populated with 2 Thalis", getCartState().canteenItems.length === 1 && getCartState().canteenItems[0].quantity === 2);
+
+        // Navigate to payment screen with totalAmount = 180
+        navigateTo('payment', {
+          shop: 'canteen',
+          items: cartState.canteenItems,
+          totalAmount: 180,
+          specialNotes: 'Extra spicy sambar'
+        });
+
+        assert("Current screen is 'payment'", getCurrentScreen() === 'payment');
+        const paymentRoot = appScreen.querySelector('#payment-screen-root');
+        assert("Payment portal rendered", paymentRoot !== null);
+
+        // Check fixed header
+        const fixedHeader = appScreen.querySelector('.payment-fixed-top-header');
+        assert("Fixed top header exists", fixedHeader !== null);
+
+        // Check scroll container
+        const scrollContainer = appScreen.querySelector('.payment-scroll-container');
+        assert("Payment scroll container exists", scrollContainer !== null);
+
+        // Check fixed bottom bar
+        const fixedBottomBar = appScreen.querySelector('.payment-fixed-bottom-bar');
+        assert("Fixed bottom payment action bar exists", fixedBottomBar !== null);
+
+        // Check bottom action bar amount
+        const bottomAmount = appScreen.querySelector('#bottom-pay-amount-display');
+        assert("Bottom action bar shows actual checkout amount (₹180.00)", bottomAmount && bottomAmount.textContent.includes('180'));
+
+        // Check initial state of action button
+        const executePayBtn = appScreen.querySelector('#btn-execute-payment');
+        const payBtnLabel = appScreen.querySelector('#btn-pay-label');
+        assert("Payment button exists", executePayBtn !== null);
+        assert("Initial payment button is disabled", executePayBtn.disabled === true);
+        assert("Initial payment button label is 'Select a Payment Method'", payBtnLabel.textContent.trim() === 'Select a Payment Method');
+
+        // Test Selecting Payment Methods
+        const methodCards = appScreen.querySelectorAll('.payment-method-card');
+        assert("Multiple payment method options are available (9 methods)", methodCards.length === 9);
+
+        // 1. Google Pay
+        const gpayCard = appScreen.querySelector('[data-method-id="gpay"]');
+        assert("Google Pay option exists", gpayCard !== null);
+        gpayCard.click();
+        assert("Google Pay card is active", gpayCard.classList.contains('active'));
+        assert("Payment button is enabled after selecting Google Pay", executePayBtn.disabled === false);
+        assert("Button label updates to 'Pay ₹180 with Google Pay'", payBtnLabel.textContent.trim() === 'Pay ₹180 with Google Pay');
+
+        // 2. PhonePe
+        const phonepeCard = appScreen.querySelector('[data-method-id="phonepe"]');
+        phonepeCard.click();
+        assert("PhonePe card is active and gpay is not", phonepeCard.classList.contains('active') && !gpayCard.classList.contains('active'));
+        assert("Button label updates to 'Pay ₹180 with PhonePe'", payBtnLabel.textContent.trim() === 'Pay ₹180 with PhonePe');
+
+        // 3. Paytm
+        const paytmCard = appScreen.querySelector('[data-method-id="paytm"]');
+        paytmCard.click();
+        assert("Button label updates to 'Pay ₹180 with Paytm'", payBtnLabel.textContent.trim() === 'Pay ₹180 with Paytm');
+
+        // 4. BHIM UPI
+        const bhimCard = appScreen.querySelector('[data-method-id="bhim"]');
+        bhimCard.click();
+        assert("Button label updates to 'Pay ₹180 with BHIM UPI'", payBtnLabel.textContent.trim() === 'Pay ₹180 with BHIM UPI');
+
+        // 5. Card
+        const cardOption = appScreen.querySelector('[data-method-id="card"]');
+        cardOption.click();
+        assert("Button label updates to 'Pay ₹180 with Card'", payBtnLabel.textContent.trim() === 'Pay ₹180 with Card');
+
+        // 6. Net Banking
+        const netbankingCard = appScreen.querySelector('[data-method-id="netbanking"]');
+        netbankingCard.click();
+        assert("Button label updates to 'Pay ₹180 via Net Banking'", payBtnLabel.textContent.trim() === 'Pay ₹180 via Net Banking');
+
+        // 7. Pay on Delivery
+        const counterCard = appScreen.querySelector('[data-method-id="counter"]');
+        assert("Pay on Delivery option exists", counterCard !== null);
+        counterCard.click();
+        assert("Button label updates to 'Place Order · Pay on Delivery'", payBtnLabel.textContent.trim() === 'Place Order · Pay on Delivery');
+        assert("Button is enabled for Pay on Delivery", executePayBtn.disabled === false);
+
+        // Test Online Payment Notice Modal
+        gpayCard.click();
+        executePayBtn.click();
+        const redirectModal = appScreen.querySelector('#app-redirect-modal');
+        assert("Online payment shows notice modal", redirectModal && redirectModal.style.display !== 'none');
+        assert("Modal informs about unconfigured gateway", redirectModal.textContent.includes('not configured'));
+
+        // Switch to Pay on Delivery from modal
+        const switchToPodBtn = appScreen.querySelector('#btn-switch-to-pod');
+        assert("Modal has 'Switch to Pay on Delivery' button", switchToPodBtn !== null);
+        switchToPodBtn.click();
+        assert("Modal closed after switching to Pay on Delivery", redirectModal.style.display === 'none');
+        assert("Method switched to Pay on Delivery", counterCard.classList.contains('active'));
+        assert("Button label is 'Place Order · Pay on Delivery'", payBtnLabel.textContent.trim() === 'Place Order · Pay on Delivery');
+
+        // Test Placing Order via Pay on Delivery
+        const ordersBefore = getAllOrders().length;
+        executePayBtn.click();
+
+        const ordersAfter = getAllOrders().length;
+        assert("Order created successfully in storage", ordersAfter === ordersBefore + 1);
+
+        const latestOrder = getAllOrders()[0];
+        assert("Latest order has total amount ₹180", latestOrder.totalAmount === 180);
+        assert("Latest order payment method is 'Pay on Delivery'", latestOrder.payment && latestOrder.payment.method === 'Pay on Delivery');
+        assert("Latest order status is 'PAY AT COUNTER'", latestOrder.payment && latestOrder.payment.status === 'PAY AT COUNTER');
+        assert("Cart for canteen was cleared after order placement", getCartState().canteenItems.length === 0);
+
+        // Check Success Modal
+        const successModal = appScreen.querySelector('#demo-success-modal');
+        assert("Order success modal is displayed", successModal && successModal.style.display !== 'none');
+        assert("Modal shows 'PAY AT COUNTER' status", successModal.querySelector('#receipt-status-pill').textContent === 'PAY AT COUNTER');
+        assert("Modal shows 'Pay on Delivery' provider", successModal.querySelector('#receipt-method-text').textContent === 'Pay on Delivery');
+        assert("Modal shows correct order ID", successModal.querySelector('#receipt-order-ref').textContent === latestOrder.orderId);
+
+        // Test View Digital Queue Token Pass
+        const viewTokenBtn = appScreen.querySelector('#btn-view-queue-token');
+        assert("View Queue Token button exists", viewTokenBtn !== null);
+        viewTokenBtn.click();
+        assert("Navigated to 'token' screen", getCurrentScreen() === 'token');
+
+        // Test My Orders History displays the order
+        navigateTo('history');
+        assert("History screen renders", getCurrentScreen() === 'history');
+        const historyOrders = appScreen.textContent;
+        assert("History screen lists the new order ID", historyOrders.includes(latestOrder.orderId));
+        assert("History screen shows ₹180 total", historyOrders.includes('180'));
+
+        log.push("\n=== ALL TEST ASSERTIONS COMPLETED SUCCESSFULLY ===");
+      } catch (err) {
+        log.push(`\n[FATAL ERROR] ${err.message}\n${err.stack}`);
+      }
+
+      document.getElementById('results').textContent = log.join('\n');
+      console.log(log.join('\n'));
+    }
+
+    // Run verification immediately
+    runVerification();
+  </script>
+</body>
+</html>

@@ -15,92 +15,101 @@ export function renderCanteenScreen(container, navigateTo) {
   const crowdStats = getShopCrowdStats('canteen');
   const categories = ['All', 'Breakfast', 'Meals', 'Snacks', 'Fast Food', 'Desserts', 'Beverages'];
 
+  // Add canteen active class to container for layout constraint
+  container.classList.add('canteen-mode-active');
+
   container.innerHTML = `
-    <div class="canteen-screen fade-in">
+    <div class="canteen-screen fade-in" id="canteen-screen-root">
       
-      <!-- 1. Top Header Bar -->
-      <div class="screen-header-bar sticky-top">
-        <button type="button" class="icon-nav-btn" id="canteen-back-btn" aria-label="Back to Dashboard">
-          ${ICONS.chevronLeft(20)}
-        </button>
-        <div class="screen-header-title-box">
-          <h2 class="screen-title">JIT CANTEEN</h2>
-          <span class="screen-badge">KITCHEN OPEN</span>
-        </div>
-        <button type="button" class="icon-nav-btn" id="canteen-cart-btn" aria-label="View Cart">
-          ${ICONS.cart(20)}
-          <span class="cart-badge-count" id="header-canteen-cart-count" style="display: none;">0</span>
-        </button>
-      </div>
-
-      <!-- 2. Compact Live Crowd & Telemetry Strip -->
-      <div style="padding: 0 16px;">
-        <div class="canteen-compact-strip" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #FFFFFF; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs);">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div class="crowd-pill ${crowdStats.badgeColor}-pill" style="padding: 3px 8px;">
-              <span class="dot"></span>
-              <span>${crowdStats.crowdLevel}</span>
-            </div>
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
-              ${ICONS.clock(13)}
-              <span>${crowdStats.estimatedWaitText} wait</span>
-            </span>
+      <!-- 1. FIXED TOP HEADER SECTION (Header, Live Crowd Strip, Search/Filter, Category Chips) -->
+      <div class="canteen-fixed-header-section">
+        
+        <!-- Header Bar -->
+        <div class="screen-header-bar canteen-header-bar">
+          <button type="button" class="icon-nav-btn" id="canteen-back-btn" aria-label="Back to Dashboard">
+            ${ICONS.chevronLeft(20)}
+          </button>
+          <div class="screen-header-title-box">
+            <h2 class="screen-title">JIT CANTEEN</h2>
+            <span class="screen-badge">KITCHEN OPEN</span>
           </div>
-          <span style="font-size: 11px; font-weight: 700; color: var(--accent-green-dark);">Live Counters Active</span>
-        </div>
-      </div>
-
-      <!-- 3. Search Bar & Dietary Filter -->
-      <div class="canteen-controls-bar">
-        <div class="search-input-wrap">
-          <span class="search-icon">${ICONS.search(18)}</span>
-          <input 
-            type="text" 
-            id="canteen-search-input" 
-            class="search-input" 
-            placeholder="Search dosas, rice, biryani, coffee..." 
-            value="${currentSearch}"
-          />
-          ${currentSearch ? `<button type="button" id="clear-canteen-search" class="clear-search-btn">✕</button>` : ''}
-        </div>
-
-        <div class="dietary-filter-pills">
-          <button type="button" class="diet-pill ${currentVegFilter === 'all' ? 'active' : ''}" data-filter="all">
-            All
-          </button>
-          <button type="button" class="diet-pill ${currentVegFilter === 'veg' ? 'active' : ''}" data-filter="veg">
-            <span class="food-diet-badge veg-badge" style="position: static; width: 12px; height: 12px;"><span class="dot" style="width: 5px; height: 5px;"></span></span>
-            <span>Pure Veg</span>
-          </button>
-          <button type="button" class="diet-pill ${currentVegFilter === 'non-veg' ? 'active' : ''}" data-filter="non-veg">
-            <span class="food-diet-badge nonveg-badge" style="position: static; width: 12px; height: 12px;"><span class="dot" style="width: 5px; height: 5px;"></span></span>
-            <span>Non-Veg</span>
+          <button type="button" class="icon-nav-btn" id="canteen-cart-btn" aria-label="View Cart">
+            ${ICONS.cart(20)}
+            <span class="cart-badge-count" id="header-canteen-cart-count" style="display: none;">0</span>
           </button>
         </div>
-      </div>
 
-      <!-- 4. Category Scrolling Chips -->
-      <div class="categories-scroll-wrapper">
-        <div class="categories-track">
-          ${categories.map(cat => `
-            <button type="button" class="category-chip ${currentCategory === cat ? 'active' : ''}" data-cat="${cat}">
-              ${cat}
+        <!-- Compact Live Crowd & Telemetry Strip -->
+        <div class="canteen-crowd-strip-container">
+          <div class="canteen-compact-strip" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #FFFFFF; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs);">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="crowd-pill ${crowdStats.badgeColor}-pill" style="padding: 3px 8px;">
+                <span class="dot"></span>
+                <span>${crowdStats.crowdLevel}</span>
+              </div>
+              <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                ${ICONS.clock(13)}
+                <span>${crowdStats.estimatedWaitText} wait</span>
+              </span>
+            </div>
+            <span style="font-size: 11px; font-weight: 700; color: var(--accent-green-dark);">Live Counters Active</span>
+          </div>
+        </div>
+
+        <!-- Search Bar & Dietary Filter -->
+        <div class="canteen-controls-bar">
+          <div class="search-input-wrap">
+            <span class="search-icon">${ICONS.search(18)}</span>
+            <input 
+              type="text" 
+              id="canteen-search-input" 
+              class="search-input" 
+              placeholder="Search dosas, rice, biryani, coffee..." 
+              value="${currentSearch}"
+            />
+            ${currentSearch ? `<button type="button" id="clear-canteen-search" class="clear-search-btn">✕</button>` : ''}
+          </div>
+
+          <div class="dietary-filter-pills">
+            <button type="button" class="diet-pill ${currentVegFilter === 'all' ? 'active' : ''}" data-filter="all">
+              All
             </button>
-          `).join('')}
+            <button type="button" class="diet-pill ${currentVegFilter === 'veg' ? 'active' : ''}" data-filter="veg">
+              <span class="food-diet-badge veg-badge" style="position: static; width: 12px; height: 12px;"><span class="dot" style="width: 5px; height: 5px;"></span></span>
+              <span>Pure Veg</span>
+            </button>
+            <button type="button" class="diet-pill ${currentVegFilter === 'non-veg' ? 'active' : ''}" data-filter="non-veg">
+              <span class="food-diet-badge nonveg-badge" style="position: static; width: 12px; height: 12px;"><span class="dot" style="width: 5px; height: 5px;"></span></span>
+              <span>Non-Veg</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Scrolling Chips -->
+        <div class="categories-scroll-wrapper">
+          <div class="categories-track">
+            ${categories.map(cat => `
+              <button type="button" class="category-chip ${currentCategory === cat ? 'active' : ''}" data-cat="${cat}">
+                ${cat}
+              </button>
+            `).join('')}
+          </div>
         </div>
       </div>
 
-      <!-- 5. Food Menu Grid -->
-      <div class="food-products-container" id="food-products-list">
-        <!-- Rendered dynamically -->
+      <!-- 2. DEDICATED SCROLLABLE CONTAINER: ONLY MENU ITEMS SCROLL VERTICALLY -->
+      <div class="canteen-menu-scroll-container" id="canteen-menu-scroll-container">
+        <div class="food-products-container" id="food-products-list">
+          <!-- Rendered dynamically -->
+        </div>
       </div>
 
-      <!-- 6. Sticky Floating Cart Summary Bar -->
-      <div class="sticky-cart-summary-bar" id="canteen-bottom-cart-bar" style="display: none;">
-        <div style="display: flex; align-items: center; gap: 10px;">
+      <!-- 3. PERMANENTLY FIXED BOTTOM VIEW CART BAR (Never moves or bounces while scrolling) -->
+      <div class="canteen-fixed-view-cart-bar" id="canteen-bottom-cart-bar" style="display: none;">
+        <div class="cart-bar-left-info">
           <span class="cart-qty-pill" id="bottom-cart-qty">0 ITEMS</span>
-          <div style="display: flex; flex-direction: column;">
-            <span style="font-size: 9px; color: #CBD5E1;">Order Total</span>
+          <div class="cart-bar-pricing">
+            <span class="cart-bar-sublabel">Total Amount</span>
             <span class="cart-total-val" id="bottom-cart-amount">₹0</span>
           </div>
         </div>
@@ -237,6 +246,7 @@ function renderFoodItems(container, navigateTo) {
             <!-- Card Body -->
             <div class="food-info">
               <h4 class="food-name">${item.name}</h4>
+              ${item.description ? `<p class="food-desc">${item.description}</p>` : ''}
               
               <div class="food-meta-row">
                 <span>⏱️ ${item.prepTime}</span>

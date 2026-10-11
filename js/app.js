@@ -11,6 +11,7 @@ import { renderStationeryScreen } from './stationery.js';
 import { renderPrintingScreen } from './printing.js';
 import { renderCartScreen } from './cart.js';
 import { renderCheckoutScreen } from './checkout.js';
+import { renderPaymentScreen } from './payment.js';
 import { renderTokenScreen } from './tokens.js';
 import { renderTrackingScreen } from './tracking.js';
 import { renderStaffScreen } from './staff.js';
@@ -19,6 +20,10 @@ import { ICONS } from './icons.js';
 
 let currentScreen = 'home';
 let currentScreenParams = {};
+
+export function getCurrentScreen() {
+  return currentScreen;
+}
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
@@ -45,6 +50,21 @@ export function navigateTo(screenName, params = {}) {
   const bottomNav = document.getElementById('mobile-bottom-nav');
 
   if (!appContainer) return;
+
+  // Manage screen-specific container classes
+  if (screenName === 'canteen') {
+    appContainer.classList.add('canteen-mode-active');
+  } else {
+    appContainer.classList.remove('canteen-mode-active');
+  }
+
+  if (screenName === 'payment') {
+    appContainer.classList.add('payment-mode-active');
+    if (bottomNav) bottomNav.style.display = 'flex';
+  } else {
+    appContainer.classList.remove('payment-mode-active');
+    if (bottomNav && screenName !== 'login') bottomNav.style.display = 'flex';
+  }
 
   // Instant scroll reset
   appContainer.scrollTo({ top: 0, behavior: 'instant' });
@@ -86,6 +106,9 @@ export function navigateTo(screenName, params = {}) {
       break;
     case 'checkout':
       renderCheckoutScreen(appContainer, navigateTo, params);
+      break;
+    case 'payment':
+      renderPaymentScreen(appContainer, navigateTo, params);
       break;
     case 'token':
       renderTokenScreen(appContainer, navigateTo, params);
@@ -138,7 +161,7 @@ function renderHomeScreen(container, navigateTo) {
           <div class="college-logo-badge">JIT</div>
           <div>
             <h1 class="header-brand-name">SMART CAMPUS</h1>
-            <span class="header-reg-pill font-mono">${user ? user.regNo : '21CS042'}</span>
+            <span class="header-reg-pill font-mono">${user ? user.regNo : ''}</span>
           </div>
         </div>
 
@@ -194,7 +217,7 @@ function renderHomeScreen(container, navigateTo) {
           <span>Track Order</span>
         </button>
         <button type="button" class="quick-action-pill" id="quick-tokens-pill">
-          ${ICONS.qrCode(15)}
+          ${ICONS.orders(15)}
           <span>My Tokens</span>
         </button>
         <button type="button" class="quick-action-pill" id="quick-staff-pill">
@@ -362,11 +385,16 @@ function updateBottomNavigation(activeScreen) {
   const ordersTab = document.getElementById('nav-btn-history');
   const profileTab = document.getElementById('nav-btn-profile');
 
-  if (homeTab) homeTab.querySelector('.nav-icon').innerHTML = ICONS.home(22);
-  if (canteenTab) canteenTab.querySelector('.nav-icon').innerHTML = ICONS.canteen(22);
-  if (statTab) statTab.querySelector('.nav-icon').innerHTML = ICONS.stationery(22);
-  if (ordersTab) ordersTab.querySelector('.nav-icon').innerHTML = ICONS.orders(22);
-  if (profileTab) profileTab.querySelector('.nav-icon').innerHTML = ICONS.profile(22);
+  const setNavIcon = (tab, iconSvg) => {
+    const iconContainer = tab?.querySelector('.nav-icon');
+    if (iconContainer) iconContainer.innerHTML = iconSvg;
+  };
+
+  setNavIcon(homeTab, ICONS.home(22));
+  setNavIcon(canteenTab, ICONS.canteen(22));
+  setNavIcon(statTab, ICONS.stationery(22));
+  setNavIcon(ordersTab, ICONS.orders(22));
+  setNavIcon(profileTab, ICONS.profile(22));
 
   const navItems = bottomNav.querySelectorAll('.nav-item');
   navItems.forEach(item => {
@@ -394,7 +422,7 @@ function updateBottomNavigation(activeScreen) {
   }
 }
 
-function setupGlobalNavigationEvents() {
+export function setupGlobalNavigationEvents() {
   const bottomNav = document.getElementById('mobile-bottom-nav');
   if (bottomNav) {
     bottomNav.querySelectorAll('.nav-item').forEach(item => {
