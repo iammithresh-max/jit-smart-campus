@@ -77,11 +77,11 @@ export function renderTokenScreen(container, navigateTo, params = {}) {
           <!-- Ticket Header Strip -->
           <div class="ticket-header-strip">
             <div>
-              <h3 class="t-college-name">JIT SMART CAMPUS</h3>
+              <h3 class="t-college-name"><span class="brand-blue">JIT</span><span class="brand-orange">ORA</span> SMART CAMPUS</h3>
               <span class="t-shop-name">${shopTitles[order.shop] || 'CAMPUS SERVICE'}</span>
             </div>
             <span class="t-status-pill ${statusColors[order.status] || ''}">
-              ${order.status.toUpperCase()}
+              ${(order.status || 'PENDING').toUpperCase()}
             </span>
           </div>
 
@@ -115,13 +115,13 @@ export function renderTokenScreen(container, navigateTo, params = {}) {
             <div class="ticket-notch notch-right"></div>
           </div>
 
-          <!-- Ticket Footer / QR & Metadata -->
+          <!-- Ticket Footer & Metadata (Strictly No QR Codes) -->
           <div class="ticket-footer-strip">
             <div class="stamp-and-meta-row">
               <div class="ticket-stamp-box">
-                <div class="verified-seal-circle">
-                  <span class="seal-icon">✓</span>
-                  <span class="seal-text">VERIFIED</span>
+                <div class="verified-seal-circle ${order.payment.status === 'PAID' ? 'seal-paid' : 'seal-queued'}">
+                  <span class="seal-icon">${order.payment.status === 'PAID' ? '✓' : '⏳'}</span>
+                  <span class="seal-text">${order.payment.status === 'PAID' ? 'VERIFIED' : 'QUEUED'}</span>
                 </div>
                 <span class="token-pass-tag font-mono">${order.token}</span>
                 <span style="font-size: 8px; font-weight: 800; color: var(--text-muted); margin-top: 2px;">Counter Pass</span>
@@ -134,11 +134,13 @@ export function renderTokenScreen(container, navigateTo, params = {}) {
                 </div>
                 <div class="t-meta-item">
                   <span class="t-meta-lbl">Student:</span>
-                  <span class="t-meta-val">${order.studentName} (${order.studentRegNo})</span>
+                  <span class="t-meta-val">${order.studentName || 'Student'} (${order.studentRegNo || '—'})</span>
                 </div>
                 <div class="t-meta-item">
-                  <span class="t-meta-lbl">Paid Amount:</span>
-                  <span class="t-meta-val text-success">₹${order.totalAmount}.00 (Verified)</span>
+                  <span class="t-meta-lbl">Payment Status:</span>
+                  <span class="t-meta-val ${order.payment && order.payment.status === 'PAID' ? 'text-success font-bold' : 'font-bold'}" style="color: ${order.payment && order.payment.status === 'PAID' ? '#047857' : '#B45309'};">
+                    ${order.payment && order.payment.status === 'PAID' ? 'PAID — Verified ✓' : `NOT PAID — Pay ₹${Number(order.totalAmount || 0).toFixed(2)} at shop`}
+                  </span>
                 </div>
                 <div class="t-meta-item">
                   <span class="t-meta-lbl">Placed At:</span>

@@ -5,7 +5,7 @@
 
 import { initStorage, getShopCrowdStats, getOrdersByStudent, getAllOrders, getCartState } from './storage.js';
 import { initAuth, getCurrentUser, isLoggedIn } from './auth.js';
-import { renderLoginScreen } from './auth.js';
+import { renderLoginScreen, renderWorkerLoginScreen, renderOwnerLoginScreen } from './auth.js';
 import { renderCanteenScreen } from './canteen.js';
 import { renderStationeryScreen } from './stationery.js';
 import { renderPrintingScreen } from './printing.js';
@@ -15,8 +15,10 @@ import { renderPaymentScreen } from './payment.js';
 import { renderTokenScreen } from './tokens.js';
 import { renderTrackingScreen } from './tracking.js';
 import { renderStaffScreen } from './staff.js';
+import { renderOwnerScreen } from './owner.js';
 import { renderHistoryScreen, renderProfileScreen } from './history.js';
 import { ICONS } from './icons.js';
+import { initSplashScreen } from './splash.js';
 
 let currentScreen = 'home';
 let currentScreenParams = {};
@@ -27,6 +29,7 @@ export function getCurrentScreen() {
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', () => {
+  initSplashScreen();
   initStorage();
   initAuth();
   setupViewportSimulatorControls();
@@ -63,18 +66,36 @@ export function navigateTo(screenName, params = {}) {
     if (bottomNav) bottomNav.style.display = 'flex';
   } else {
     appContainer.classList.remove('payment-mode-active');
-    if (bottomNav && screenName !== 'login') bottomNav.style.display = 'flex';
+    if (bottomNav && screenName !== 'login' && screenName !== 'worker-login' && screenName !== 'owner-login') {
+      bottomNav.style.display = 'flex';
+    }
   }
 
   // Instant scroll reset
   appContainer.scrollTo({ top: 0, behavior: 'instant' });
 
-  // Handle Login Screen
+  // Handle Unauthenticated Screens (Student, Worker, Owner Logins)
   if (screenName === 'login') {
     if (bottomNav) bottomNav.style.display = 'none';
     renderLoginScreen(appContainer, (session) => {
       navigateTo('home');
-    });
+    }, navigateTo);
+    return;
+  }
+
+  if (screenName === 'worker-login') {
+    if (bottomNav) bottomNav.style.display = 'none';
+    renderWorkerLoginScreen(appContainer, (session) => {
+      navigateTo('staff');
+    }, navigateTo);
+    return;
+  }
+
+  if (screenName === 'owner-login') {
+    if (bottomNav) bottomNav.style.display = 'none';
+    renderOwnerLoginScreen(appContainer, (session) => {
+      navigateTo('owner');
+    }, navigateTo);
     return;
   }
 
@@ -119,6 +140,9 @@ export function navigateTo(screenName, params = {}) {
     case 'staff':
       renderStaffScreen(appContainer, navigateTo);
       break;
+    case 'owner':
+      renderOwnerScreen(appContainer, navigateTo);
+      break;
     case 'history':
       renderHistoryScreen(appContainer, navigateTo);
       break;
@@ -137,31 +161,48 @@ function renderHomeScreen(container, navigateTo) {
   const user = getCurrentUser();
   const canteenCrowd = getShopCrowdStats('canteen');
   const stationeryCrowd = getShopCrowdStats('stationery');
-  const allStudentOrders = user && user.role === 'student'
-    ? getOrdersByStudent(user.regNo)
-    : getAllOrders();
+  const isStudent = user && (user.role || '').toLowerCase() === 'student';
+  const allStudentOrders = isStudent ? getOrdersByStudent(user.regNo) : [];
 
+  const inactiveStatuses = ['completed', 'collected', 'cancelled', 'rejected'];
   const activeOrders = allStudentOrders.filter(
-    o => o.status !== 'Completed' && o.status !== 'Cancelled'
+    o => o && !inactiveStatuses.includes((o.status || '').toLowerCase().trim())
   );
 
-  const cart = getCartState();
-  const cartItemTotal = (cart.canteenItems || []).reduce((s, i) => s + i.quantity, 0) +
-                        (cart.stationeryItems || []).reduce((s, i) => s + i.quantity, 0) +
-                        (cart.printJob ? 1 : 0);
+  const cart = getCartState() || {};
+  const canteenItems = Array.isArray(cart.canteenItems) ? cart.canteenItems : [];
+  const stationeryItems = Array.isArray(cart.stationeryItems) ? cart.stationeryItems : [];
+  const canteenQty = canteenItems.reduce((s, i) => s + (Number.isFinite(Number(i?.quantity)) ? Number(i.quantity) : 0), 0);
+  const statQty = stationeryItems.reduce((s, i) => s + (Number.isFinite(Number(i?.quantity)) ? Number(i.quantity) : 0), 0);
+  const printQty = cart.printJob ? 1 : 0;
+  const cartItemTotal = canteenQty + statQty + printQty;
 
-  const firstName = user ? user.name.split(' ')[0] : 'Student';
+  const firstName = (user && typeof user.name === 'string' && user.name.trim() && user.name.trim() !== 'undefined')
+    ? user.name.trim().split(/\s+/)[0]
+    : 'Student';
+
+  const userAvatar = (user && user.avatar && user.avatar !== 'undefined' && user.avatar.trim())
+    ? user.avatar.trim()
+    : '👨‍🎓';
+
+  const studentRegNo = (user && user.regNo && String(user.regNo).trim() && String(user.regNo).trim() !== 'undefined')
+    ? String(user.regNo).trim()
+    : (user && user.empId && String(user.empId).trim() !== 'undefined' ? String(user.empId).trim() : '');
+
+  const brandSubtitle = studentRegNo ? studentRegNo : 'Your Campus. Your Convenience.';
 
   container.innerHTML = `
     <div class="home-screen fade-in">
       
-      <!-- 1. Compact, Elegant Header -->
+      <!-- 1. Compact, Elegant Header with exact JITORA Logo and Branding -->
       <header class="home-compact-header">
-        <div class="brand-wordmark-wrap">
-          <div class="college-logo-badge">JIT</div>
-          <div>
-            <h1 class="header-brand-name">SMART CAMPUS</h1>
-            <span class="header-reg-pill font-mono">${user ? user.regNo : ''}</span>
+        <div class="brand-wordmark-wrap" id="home-brand-logo-wrap">
+          <img src="assets/jitora-logo.png" alt="JITORA" class="header-jitora-logo-img" />
+          <div class="brand-titles-col">
+            <h1 class="header-brand-name">
+              <span class="brand-blue">JIT</span><span class="brand-orange">ORA</span>
+            </h1>
+            <span class="header-reg-pill ${studentRegNo ? 'font-mono' : 'header-brand-sub'}">${brandSubtitle}</span>
           </div>
         </div>
 
@@ -169,12 +210,12 @@ function renderHomeScreen(container, navigateTo) {
           <!-- Cart Shortcut -->
           <button type="button" class="header-action-btn" id="home-cart-shortcut" aria-label="Shopping Cart">
             ${ICONS.cart(20)}
-            ${cartItemTotal > 0 ? `<span class="cart-pill-count">${cartItemTotal}</span>` : ''}
+            ${Number.isInteger(cartItemTotal) && cartItemTotal > 0 ? `<span class="cart-pill-count">${cartItemTotal}</span>` : ''}
           </button>
 
           <!-- User Profile Avatar -->
-          <button type="button" class="user-avatar-pill" id="home-profile-btn" aria-label="Student Profile">
-            <span>${user ? user.avatar : '👨‍🎓'}</span>
+          <button type="button" class="user-avatar-pill" id="home-profile-btn" aria-label="Student Profile" title="${(user && user.name) ? user.name : 'Student Profile'}">
+            <span>${userAvatar}</span>
           </button>
         </div>
       </header>
@@ -190,14 +231,14 @@ function renderHomeScreen(container, navigateTo) {
         <p class="hero-subtext">Order ahead. Save time. Get back to what matters.</p>
       </section>
 
-      <!-- 3. Live Active Token Banner (Dynamic Island feel) -->
+      <!-- 3. Live Active Token Banner (Shows ONLY for logged-in student's genuinely active orders) -->
       ${activeOrders.length > 0 ? `
         <div class="live-activity-bar" id="home-quick-active-token" data-id="${activeOrders[0].orderId}">
           <div class="la-left">
             <span class="la-token-badge font-mono">${activeOrders[0].token}</span>
             <div class="la-meta">
               <span class="la-shop">${activeOrders[0].shop === 'canteen' ? 'Canteen Food' : activeOrders[0].shop === 'stationery' ? 'Stationery Order' : 'Print Job'}</span>
-              <span class="la-status">${activeOrders[0].status === 'Ready for Collection' ? '🔔 Ready for Pickup!' : `${activeOrders[0].status} in Queue`}</span>
+              <span class="la-status">${activeOrders[0].status === 'Ready for Collection' || activeOrders[0].status === 'Ready for Pickup' ? '🔔 Ready for Pickup!' : `${activeOrders[0].status} in Queue`}</span>
             </div>
           </div>
           <div class="la-arrow">
@@ -223,6 +264,9 @@ function renderHomeScreen(container, navigateTo) {
         <button type="button" class="quick-action-pill" id="quick-staff-pill">
           ${ICONS.sliders(15)}
           <span>Staff Desk</span>
+        </button>
+        <button type="button" class="quick-action-pill" id="quick-owner-pill" style="border-color: #0D9488; color: #047857;">
+          <span>👔 Owner Desk</span>
         </button>
       </div>
 
@@ -354,6 +398,9 @@ function renderHomeScreen(container, navigateTo) {
   const quickStaffPill = container.querySelector('#quick-staff-pill');
   if (quickStaffPill) quickStaffPill.addEventListener('click', () => navigateTo('staff'));
 
+  const quickOwnerPill = container.querySelector('#quick-owner-pill');
+  if (quickOwnerPill) quickOwnerPill.addEventListener('click', () => navigateTo('owner'));
+
   const cartShortcut = container.querySelector('#home-cart-shortcut');
   if (cartShortcut) cartShortcut.addEventListener('click', () => navigateTo('cart'));
 
@@ -408,8 +455,12 @@ function updateBottomNavigation(activeScreen) {
 
   // Badge updates
   const user = getCurrentUser();
-  const orders = user && user.role === 'student' ? getOrdersByStudent(user.regNo) : getAllOrders();
-  const activeOrdersCount = orders.filter(o => o.status !== 'Completed' && o.status !== 'Cancelled').length;
+  const isStudent = user && (user.role || '').toLowerCase() === 'student';
+  const orders = isStudent ? getOrdersByStudent(user.regNo) : [];
+  const inactiveStatuses = ['completed', 'collected', 'cancelled', 'rejected'];
+  const activeOrdersCount = orders.filter(
+    o => o && !inactiveStatuses.includes((o.status || '').toLowerCase().trim())
+  ).length;
 
   const ordersBadge = bottomNav.querySelector('#nav-orders-badge');
   if (ordersBadge) {
@@ -436,9 +487,42 @@ export function setupGlobalNavigationEvents() {
     });
   }
 
-  window.addEventListener('jit:order_status_changed', (e) => {
-    const order = e.detail;
-    showToastNotification(`Order #${order.token} status updated: ${order.status}!`);
+  function handleOrderUpdateEvent(e) {
+    const user = getCurrentUser();
+    const appContainer = document.getElementById('mobile-app-screen');
+
+    // Always refresh bottom nav badges
+    updateBottomNavigation(currentScreen);
+
+    // If order status changed notification
+    if (e && e.type === 'jit:order_status_changed' && e.detail) {
+      const order = e.detail;
+      const isForCurrentUser = user && (
+        (user.regNo && order.studentRegNo && String(user.regNo).toUpperCase() === String(order.studentRegNo).toUpperCase()) ||
+        (user.role === 'WORKER' && user.assignedShop === order.shop) ||
+        user.role === 'SHOP_OWNER' || user.role === 'SYSTEM_ADMIN'
+      );
+      if (isForCurrentUser) {
+        showToastNotification(`Order #${order.token} status: ${order.status}!`);
+      }
+    }
+
+    // Immediately re-render active screen if displaying order/token state
+    if (currentScreen === 'home' && appContainer) {
+      renderHomeScreen(appContainer, navigateTo);
+    } else if (currentScreen === 'history' && appContainer) {
+      renderHistoryScreen(appContainer, navigateTo);
+    } else if (currentScreen === 'token' && appContainer) {
+      renderTokenScreen(appContainer, navigateTo, currentScreenParams);
+    }
+  }
+
+  window.addEventListener('jit:order_status_changed', handleOrderUpdateEvent);
+  window.addEventListener('jit:orders_updated', handleOrderUpdateEvent);
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'jit_orders_v1') {
+      handleOrderUpdateEvent(e);
+    }
   });
 }
 
@@ -465,12 +549,16 @@ function setupViewportSimulatorControls() {
 
   if (!simulatorWrap || sizePills.length === 0) return;
 
+  // Set default initial viewport data attribute
+  simulatorWrap.setAttribute('data-viewport', '390');
+
   sizePills.forEach(pill => {
     pill.addEventListener('click', () => {
       sizePills.forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
 
       const width = pill.getAttribute('data-width');
+      simulatorWrap.setAttribute('data-viewport', width || '390');
       if (width === 'full') {
         simulatorWrap.style.width = '100%';
         simulatorWrap.style.maxWidth = '100%';

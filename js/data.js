@@ -3,63 +3,193 @@
  * Food items, Stationery inventory, Print rates, and Demo Accounts
  */
 
-export const DEMO_ACCOUNTS = [
+export const APP_CONFIG = {
+  merchantUpiId: 'iammithresh@oksbi', // Treated as UNVERIFIED configuration value until bank/merchant API authorization
+  merchantName: 'JIT Smart Campus Concessions',
+  paymentGatewayProvider: 'Razorpay / Cashfree / NPCI UPI',
+  isMerchantVerified: false, // Production gateway requires merchant onboarding
+  qrCodesEnabled: false // STRICT: No QR codes anywhere
+};
+
+// 1. Authorized Demonstration Student Records
+export const DEMO_STUDENT_ACCOUNTS = [
   {
-    role: 'student',
+    role: 'STUDENT',
     regNo: '711125104066',
     name: 'Mithresh Kanna S',
     department: 'Computer Science & Engineering',
     year: '1st Year (B.E.)',
     phone: '+91 98765 43210',
     dob: '2007-11-04',
-    avatar: '👨‍🎓'
+    avatar: '👨‍🎓',
+    isDemo: true
   },
   {
-    role: 'student',
+    role: 'STUDENT',
     regNo: '711125104069',
     name: 'MuthuChellaKumar',
     department: 'Electronics & Communication',
     year: '1st Year (B.E.)',
     phone: '+91 98451 23456',
     dob: '2008-01-17',
-    avatar: '👨‍🎓'
+    avatar: '👨‍🎓',
+    isDemo: true
   },
   {
-    role: 'student',
+    role: 'STUDENT',
     regNo: '711125104114',
     name: 'Udhaya K',
     department: 'Mechanical Engineering',
     year: '1st Year (B.E.)',
     phone: '+91 97890 65432',
     dob: '2007-05-08',
-    avatar: '👨‍🎓'
+    avatar: '👨‍🎓',
+    isDemo: true
+  }
+];
+
+// 2. Fictional Demo Worker Accounts (5 Workers with plausible adult DOBs and assigned shops)
+export const DEMO_WORKER_ACCOUNTS = [
+  {
+    role: 'WORKER',
+    empId: 'JIT-W001',
+    name: 'Anitha M',
+    dob: '1989-04-12', // Plausible adult DOB
+    assignedShop: 'canteen',
+    canCollectPayment: true,
+    status: 'ACTIVE',
+    phone: '+91 94432 11001',
+    avatar: '👩‍🍳',
+    pin: 'demo123',
+    isDemo: true
   },
   {
+    role: 'WORKER',
+    empId: 'JIT-W002',
+    name: 'Senthil Kumar',
+    dob: '1993-08-25', // Plausible adult DOB
+    assignedShop: 'canteen',
+    canCollectPayment: true,
+    status: 'ACTIVE',
+    phone: '+91 94432 11002',
+    avatar: '👨‍🍳',
+    pin: 'demo123',
+    isDemo: true
+  },
+  {
+    role: 'WORKER',
+    empId: 'JIT-W003',
+    name: 'Ramesh Kumar',
+    dob: '1988-06-15', // Plausible adult DOB
+    assignedShop: 'stationery',
+    canCollectPayment: true,
+    status: 'ACTIVE',
+    phone: '+91 94432 11003',
+    avatar: '📚',
+    pin: 'demo123',
+    isDemo: true
+  },
+  {
+    role: 'WORKER',
+    empId: 'JIT-W004',
+    name: 'Deepa S',
+    dob: '1995-11-03', // Plausible adult DOB
+    assignedShop: 'stationery',
+    canCollectPayment: false, // Permission test: cannot collect cash until authorized
+    status: 'ACTIVE',
+    phone: '+91 94432 11004',
+    avatar: '👩‍💼',
+    pin: 'demo123',
+    isDemo: true
+  },
+  {
+    role: 'WORKER',
+    empId: 'JIT-W005',
+    name: 'Karthik Raja',
+    dob: '1992-02-18', // Plausible adult DOB
+    assignedShop: 'printing',
+    canCollectPayment: true,
+    status: 'ACTIVE',
+    phone: '+91 94432 11005',
+    avatar: '🖨️',
+    pin: 'demo123',
+    isDemo: true
+  }
+];
+
+// 3. Fictional Demo Shop Owner Accounts
+export const DEMO_OWNER_ACCOUNTS = [
+  {
+    role: 'SHOP_OWNER',
+    ownerId: 'JIT-O001',
+    name: 'Thiru. K. Rajendran',
+    assignedShops: ['canteen'],
+    status: 'ACTIVE',
+    phone: '+91 98421 99001',
+    avatar: '👔',
+    pin: 'owner123',
+    isDemo: true
+  },
+  {
+    role: 'SHOP_OWNER',
+    ownerId: 'JIT-O002',
+    name: 'Tmt. Lakshmi Narayanan',
+    assignedShops: ['stationery', 'printing'],
+    status: 'ACTIVE',
+    phone: '+91 98421 99002',
+    avatar: '👩‍💼',
+    pin: 'owner123',
+    isDemo: true
+  }
+];
+
+// 4. Campus System Admin Account
+export const DEMO_ADMIN_ACCOUNT = {
+  role: 'SYSTEM_ADMIN',
+  adminId: 'ADMIN-001',
+  name: 'Dr. S. Sundararajan',
+  department: 'Campus Administration',
+  phone: '+91 94432 99887',
+  avatar: '⚙️',
+  pin: 'admin123',
+  isDemo: true
+};
+
+// Unified export for backward compatibility
+export const DEMO_ACCOUNTS = [
+  ...DEMO_STUDENT_ACCOUNTS.map(s => ({ ...s, role: 'student' })),
+  {
     role: 'canteen_staff',
-    regNo: 'STAFF-CANTEEN',
-    name: 'Chef Murugan',
+    regNo: 'JIT-W001',
+    name: 'Anitha M (Canteen)',
     department: 'JIT Canteen Operations',
-    phone: '+91 94432 11223',
-    dob: '1985-01-01',
-    avatar: '👨‍🍳'
+    phone: '+91 94432 11001',
+    dob: '1989-04-12',
+    avatar: '👩‍🍳',
+    empId: 'JIT-W001',
+    assignedShop: 'canteen'
   },
   {
     role: 'stationery_staff',
-    regNo: 'STAFF-STATIONERY',
-    name: 'Ramesh Kumar',
+    regNo: 'JIT-W003',
+    name: 'Ramesh Kumar (Stationery)',
     department: 'JIT Stationery Store',
-    phone: '+91 94432 33445',
+    phone: '+91 94432 11003',
     dob: '1988-06-15',
-    avatar: '📚'
+    avatar: '📚',
+    empId: 'JIT-W003',
+    assignedShop: 'stationery'
   },
   {
     role: 'printing_staff',
-    regNo: 'STAFF-PRINTING',
-    name: 'Karthik Raja',
+    regNo: 'JIT-W005',
+    name: 'Karthik Raja (Printing)',
     department: 'JIT Reprographics & Printing',
-    phone: '+91 94432 55667',
-    dob: '1992-11-30',
-    avatar: '🖨️'
+    phone: '+91 94432 11005',
+    dob: '1992-02-18',
+    avatar: '🖨️',
+    empId: 'JIT-W005',
+    assignedShop: 'printing'
   },
   {
     role: 'admin',
@@ -68,7 +198,8 @@ export const DEMO_ACCOUNTS = [
     department: 'Campus Administration',
     phone: '+91 94432 99887',
     dob: '1975-04-10',
-    avatar: '⚙️'
+    avatar: '⚙️',
+    adminId: 'ADMIN-001'
   }
 ];
 

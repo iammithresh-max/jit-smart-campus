@@ -57,57 +57,108 @@
 - **Step 3: Price Summary:** Transparent pricing table recalculating automatically.
 - **Step 4: Continue:** Direct handoff to checkout review.
 
-### 5. Shopping Cart & Checkout Review
-- Isolated checkout pipelines for Canteen, Stationery, and Printing.
-- Quantity steppers, remove item actions, and clear bill summary.
-- **Checkout Review:** Destination pickup counter, student register number, special instructions input, and dynamic prominent CTA: `Pay ₹[Total]`.
-- **Payment Sheet:** Instant UPI apps, dynamic QR code simulation, and clearly labelled simulation buttons:
-  - `[ ✅ Simulate Successful Payment ]` — Validates on server and allocates guaranteed token.
-  - `[ ❌ Simulate Failed Payment ]` — Tests decline handling without token generation.
-- **Animated Success Screen:** *"Payment Verified! 🎉"* before transitioning to Digital Token.
+### 5. Shopping Cart & Dedicated Checkout
+- Unified cart and checkout experience across Canteen, Stationery, and Printing services.
+- Real-time order calculation in ₹ INR; server-side price and availability validation.
+- **Pay on Delivery (POD) - Dedicated Workflow:**
+  - Token generated immediately upon checkout.
+  - Initial Payment Status: `NOT PAID` (`NOT PAID — Pay at the shop`).
+  - Clear guidance: *"Order placed successfully! Please pay at the shop when collecting your order."*
+  - Authorized physical payment collection by staff required before marking `PAID`.
+- **Online Payment Gateways:**
+  - Dynamic button reflecting selected method and exact order total (e.g., `Pay ₹120 with Google Pay`, `Pay ₹120 with PhonePe`, `Pay ₹120 by Card`, `Place Order · Pay on Delivery`).
+  - Configured UPI ID: `iammithresh@oksbi` (unverified configuration value pending bank merchant onboarding).
+  - Explicit outcomes: Success, Failed, Cancelled, Pending, Unknown/Network Error.
+  - **Zero QR Codes:** QR codes are strictly prohibited and eliminated across all flows.
 
-### 6. Digital Token Display (Boarding Pass Ticket)
-- Ticket styling with notch cutouts, dashed perforation line, and high-contrast typography.
-- Giant focal collection token number (e.g. `C-024`, `S-010`, `P-005`).
-- Telemetry metrics: **Queue Position**, **Orders Ahead**, and **Estimated Wait Time**.
-- Vector SVG QR code for counter scanning.
-- Direct actions: *Track Live Queue Timeline*, *All Orders*, and *Back to Home*.
+### 6. Digital Token & Queue Display
+- Clean boarding pass design with high-contrast typography.
+- Prominent collection token number (e.g. `C-024`, `S-010`, `P-005`).
+- Dynamic payment verification badge (`PAID — Verified ✓` vs `NOT PAID — Pay at shop`).
+- Queue position and estimated wait time based on actual in-flight orders.
+- Direct navigation: *Track Live Queue*, *My Orders*, and *Back to Home*.
 
-### 7. Order Tracking Timeline
-- Vertical progression timeline: *Confirmed ➔ Preparing/Processing/Printing ➔ Ready for Collection ➔ Completed*.
-- Auto-sync polling every 2.5 seconds.
-- **Web Audio API Chime:** Plays a chime when staff marks the order *"Ready for Collection!"*.
-
-### 8. Staff & Admin Desks
-- **Canteen Staff:** Live kitchen queue sorted by sequence (*Start Preparing ➔ Mark Ready ➔ Complete Handover*).
-- **Stationery Staff:** Store packing queue (*Start Packing ➔ Mark Ready ➔ Complete*).
-- **Printing Staff:** Reprographics queue showing full document specifications (Total Pages, B&W/Color, Copies, Range) (*Start Laser Print ➔ Mark Ready ➔ Collected*).
-- **Campus Admin:** Edit product prices, toggle stock availability, configure B&W and Colour rates per page, and inspect total revenue and active tokens.
+### 7. Staff & Shop Owner Desks
+- **Dedicated Worker Portal (`#worker-login`):**
+  - Unique Employee IDs (`JIT-W001` through `JIT-W005`).
+  - Strict shop-level data isolation.
+  - Physical Cash Collection Modal with order verification, collected amount, and audit logging.
+- **Dedicated Shop Owner Portal (`#owner-login`):**
+  - Unique Owner IDs (`JIT-O001`, `JIT-O002`).
+  - Real-time shop order monitoring and cash collection history (staff ID, amount, timestamp).
+  - Product catalog, prices, and stock toggle.
+  - Worker permission management (grant/revoke cash collection privilege).
 
 ---
 
-## 🔑 Demo Accounts
+## 🔑 Authorized Credentials & Accounts
 
-| Role | Name | Register Number | DOB / Password |
+### 🎓 Authorized Student Accounts (Reg No + DOB Only)
+*No student name is ever asked on the login page; DOB is strictly validated and never stored in client localStorage.*
+
+| Student Name | Register Number | Date of Birth | Department | Year |
+|---|---|---|---|---|
+| **Mithresh Kanna S** | `711125104066` | `2007-10-18` | Computer Science | 1st Year (B.E.) |
+| **MuthuChellaKumar** | `711125104069` | `2008-01-17` | Electronics & Comm. | 1st Year (B.E.) |
+| **Udhaya K** | `711125104114` | `2007-05-08` | Mechanical Engg. | 1st Year (B.E.) |
+
+### 👷 Authorized Demo Workers (`#worker-login`)
+*Employee ID + Security PIN (Default demo PIN: `demo123`)*
+
+| Employee ID | Name | Plausible DOB | Assigned Shop | Can Collect Cash |
+|---|---|---|---|---|
+| **JIT-W001** | Anitha M | `1989-04-12` | JIT Canteen | ✅ Yes |
+| **JIT-W002** | Senthil Kumar | `1993-08-25` | JIT Canteen | ✅ Yes |
+| **JIT-W003** | Ramesh Kumar | `1988-06-15` | JIT Stationery | ✅ Yes |
+| **JIT-W004** | Deepa R | `1995-11-03` | JIT Stationery | ❌ No (Owner Managed) |
+| **JIT-W005** | Karthik Raja | `1992-02-18` | Printing Service | ✅ Yes |
+
+### 👔 Authorized Shop Owners (`#owner-login`)
+*Owner ID + Security PIN (Default demo PIN: `owner123`)*
+
+| Owner ID | Name | Authorized Shop(s) | Role |
 |---|---|---|---|
-| **Student** | Rahul Sharma | `21CS042` | `2003-05-14` |
-| **Student** | Priya Patel | `21EC015` | `2004-08-22` |
-| **Canteen Staff** | Chef Murugan | `STAFF-CANTEEN` | One-tap |
-| **Stationery Staff** | Ramesh Kumar | `STAFF-STATIONERY` | One-tap |
-| **Printing Staff** | Karthik Raja | `STAFF-PRINTING` | One-tap |
-| **Campus Admin** | Dr. S. Sundararajan | `ADMIN-001` | One-tap |
+| **JIT-O001** | Sundararajan S | JIT Canteen | SHOP_OWNER |
+| **JIT-O002** | Meenakshi Sundaram | JIT Stationery, Printing Service | SHOP_OWNER |
 
 ---
 
 ## 🚀 Running the Application
 
-The application runs with zero external npm dependencies:
-
+### Option A: Local Development & Verification (Zero Dependencies)
+Runs with native PowerShell HTTP + REST API Server:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\serve.ps1
 ```
+Open in browser:
+- Main Web Application: `http://localhost:5500/`
+- Full Automated Test Suite: `http://localhost:5500/test_verification.html`
 
-Access in your browser at:
+### Option B: Turnkey Node.js / Express Production Backend
+```bash
+cd server
+npm install
+npm start
 ```
-http://localhost:5500/
+Default port: `http://localhost:5000` (configurable via `.env`).
+
+### Option C: GitHub Pages Deployment
+The frontend is statically self-contained and deploys directly to GitHub Pages. It connects automatically to the configured backend API or uses safe client validation when offline.
+
+---
+
+## 🧪 Automated Test Suite
+
+To run the automated verification test harness against headless Edge:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run_tests.ps1
 ```
+The test suite validates:
+1. Student login (Reg No + DOB only, no student name input, DOB stripped from session).
+2. Worker login (Employee ID + PIN, 5 demo worker profiles, shop isolation).
+3. Owner login & RBAC isolation (Owner ID + PIN, owner dashboard, student access blocked).
+4. Pay on Delivery separate workflow (`PLACED`, `NOT PAID`, immediate token, prompt).
+5. Physical cash collection (authorized worker confirmation, receipt timestamp, staff ID, duplicate prevention).
+6. Dynamic payment button labels and strictly zero QR codes.
+7. Profile and My Orders navigation, filtering, and persistence.
+8. Owner worker permission toggle.

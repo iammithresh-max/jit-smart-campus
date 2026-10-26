@@ -26,6 +26,10 @@ export function renderCheckoutScreen(container, navigateTo, checkoutParams = {})
     printing: 'Reprographics Center (Room 104)'
   };
 
+  const safeAvatar = (user && user.avatar && user.avatar !== 'undefined' && String(user.avatar).trim()) ? String(user.avatar).trim() : '👨‍🎓';
+  const safeName = (user && user.name && user.name !== 'undefined' && String(user.name).trim()) ? String(user.name).trim() : 'Student';
+  const safeRegNo = (user && user.regNo && String(user.regNo).trim() !== 'undefined') ? String(user.regNo).trim() : (user && user.empId ? String(user.empId).trim() : '');
+
   container.innerHTML = `
     <div class="checkout-screen fade-in">
       
@@ -56,13 +60,13 @@ export function renderCheckoutScreen(container, navigateTo, checkoutParams = {})
         <!-- 2. Student Verification Badge -->
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #FFFFFF; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); box-shadow: var(--shadow-xs);">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="font-size: 24px;">${user ? user.avatar : '👨‍🎓'}</div>
+            <div style="font-size: 24px;">${safeAvatar}</div>
             <div>
               <span style="font-size: 10px; color: var(--text-muted);">Ordering As:</span>
-              <h4 style="font-size: 13px; font-weight: 800; color: var(--primary-navy);">${user ? user.name : 'Student'}</h4>
+              <h4 style="font-size: 13px; font-weight: 800; color: var(--primary-navy);">${safeName}</h4>
             </div>
           </div>
-          <span style="font-size: 11px; font-weight: 700; color: var(--secondary-violet); font-family: var(--font-mono);">${user ? user.regNo : ''}</span>
+          <span style="font-size: 11px; font-weight: 700; color: var(--secondary-violet); font-family: var(--font-mono);">${safeRegNo}</span>
         </div>
 
         <!-- 3. Order Items Review -->

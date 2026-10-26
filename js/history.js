@@ -33,20 +33,21 @@ function getStudentInitials(name) {
  */
 export function renderHistoryScreen(container, navigateTo) {
   const user = getCurrentUser();
-  const studentOrders = user && user.role === 'student'
-    ? getOrdersByStudent(user.regNo)
-    : getAllOrders();
+  const isStudent = user && (user.role || '').toLowerCase() === 'student';
+  const studentOrders = isStudent ? getOrdersByStudent(user.regNo) : (user ? getAllOrders() : []);
+
+  const inactiveStatuses = ['completed', 'collected', 'cancelled', 'rejected'];
 
   // Dynamic statistics calculations
   const totalOrdersCount = studentOrders.length;
   const activeOrdersCount = studentOrders.filter(
-    o => o.status !== 'Completed' && o.status !== 'Cancelled'
+    o => o && !inactiveStatuses.includes((o.status || '').toLowerCase().trim())
   ).length;
   const completedOrdersCount = studentOrders.filter(
-    o => o.status === 'Completed'
+    o => o && ['completed', 'collected'].includes((o.status || '').toLowerCase().trim())
   ).length;
   const cancelledOrdersCount = studentOrders.filter(
-    o => o.status === 'Cancelled'
+    o => o && ['cancelled', 'rejected'].includes((o.status || '').toLowerCase().trim())
   ).length;
 
   container.innerHTML = `
@@ -167,20 +168,21 @@ function renderOrderCardsList(container, navigateTo) {
   if (!listEl) return;
 
   const user = getCurrentUser();
-  const allOrders = user && user.role === 'student'
-    ? getOrdersByStudent(user.regNo)
-    : getAllOrders();
+  const isStudent = user && (user.role || '').toLowerCase() === 'student';
+  const allOrders = isStudent ? getOrdersByStudent(user.regNo) : (user ? getAllOrders() : []);
+  const inactiveStatuses = ['completed', 'collected', 'cancelled', 'rejected'];
 
   // Apply active filter
   const filtered = allOrders.filter(order => {
+    const s = (order.status || '').toLowerCase().trim();
     if (currentHistoryFilter === 'active') {
-      return order.status !== 'Completed' && order.status !== 'Cancelled';
+      return !inactiveStatuses.includes(s);
     }
     if (currentHistoryFilter === 'completed') {
-      return order.status === 'Completed';
+      return ['completed', 'collected'].includes(s);
     }
     if (currentHistoryFilter === 'cancelled') {
-      return order.status === 'Cancelled';
+      return ['cancelled', 'rejected'].includes(s);
     }
     return true;
   });
@@ -294,7 +296,7 @@ function renderOrderCardsList(container, navigateTo) {
             <div class="odc-payment-info-row">
               <div class="odc-pricing-block">
                 <span class="odc-amount-lbl">Total Amount</span>
-                <span class="odc-amount-val font-mono">₹${order.totalAmount}.00</span>
+                <span class="odc-amount-val font-mono">₹${Number(order.totalAmount || 0).toFixed(2)}</span>
               </div>
 
               <div class="odc-status-block">
@@ -302,8 +304,8 @@ function renderOrderCardsList(container, navigateTo) {
                   ${isReady ? '🔔 ' : ''}${order.status}
                 </span>
                 ${order.payment ? `
-                  <span class="odc-payment-pill">
-                    💳 ${order.payment.method || 'Online'} • ${order.payment.status || 'VERIFIED'}
+                  <span class="odc-payment-pill" style="color: ${order.payment.status === 'PAID' ? '#047857' : '#B45309'}; background: ${order.payment.status === 'PAID' ? '#ECFDF5' : '#FEF3C7'}; font-weight: 700;">
+                    💳 ${order.payment.method || 'Online'} • ${order.payment.status === 'PAID' ? 'PAID ✓' : 'NOT PAID (Pay at shop)'}
                   </span>
                 ` : ''}
               </div>
@@ -506,8 +508,20 @@ function showOrderDetailsModal(container, order, navigateTo) {
         </div>
         <div class="odm-meta-row">
           <span class="odm-meta-lbl">Payment Status:</span>
-          <strong class="odm-meta-val text-emerald">${order.payment?.status || 'VERIFIED'}</strong>
+          <strong class="odm-meta-val" style="color: ${order.payment?.status === 'PAID' ? '#047857' : '#B45309'};">
+            ${order.payment?.status === 'PAID' ? 'PAID — Payment Received ✓' : 'NOT PAID — Pay at the shop'}
+          </strong>
         </div>
+        ${order.payment?.collectedBy ? `
+          <div class="odm-meta-row">
+            <span class="odm-meta-lbl">Collected By Staff:</span>
+            <span class="odm-meta-val font-mono">${order.payment.collectedByName || order.payment.collectedBy}</span>
+          </div>
+          <div class="odm-meta-row">
+            <span class="odm-meta-lbl">Collection Time:</span>
+            <span class="odm-meta-val">${new Date(order.payment.collectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        ` : ''}
         <div class="odm-meta-row">
           <span class="odm-meta-lbl">Order Status:</span>
           <strong class="odm-meta-val">${order.status}</strong>
@@ -667,8 +681,13 @@ export function renderProfileScreen(container, navigateTo) {
     o => o.status === 'Completed'
   ).length;
 
-  const initials = getStudentInitials(user ? user.name : 'Student');
-  const studentEmail = (user && user.regNo) ? `${user.regNo.toLowerCase()}@jit.edu.in` : 'student@jit.edu.in';
+  const studentName = (user && user.name && user.name !== 'undefined' && String(user.name).trim()) ? String(user.name).trim() : 'Campus Scholar';
+  const studentRegNo = (user && user.regNo && String(user.regNo).trim() !== 'undefined') ? String(user.regNo).trim() : (user && user.empId ? String(user.empId).trim() : '—');
+  const studentDept = (user && user.department && user.department !== 'undefined' && String(user.department).trim()) ? String(user.department).trim() : 'Engineering & Technology';
+  const studentRole = (user && user.role && user.role !== 'undefined') ? String(user.role).toUpperCase() : 'STUDENT';
+  const studentPhone = (user && user.phone && user.phone !== 'undefined' && String(user.phone).trim()) ? String(user.phone).trim() : '+91 94432 00000';
+  const initials = getStudentInitials(studentName);
+  const studentEmail = (studentRegNo && studentRegNo !== '—') ? `${studentRegNo.toLowerCase()}@jit.edu.in` : 'student@jit.edu.in';
 
   container.innerHTML = `
     <div class="profile-screen fade-in" id="profile-screen-root">
@@ -707,12 +726,12 @@ export function renderProfileScreen(container, navigateTo) {
           </div>
 
           <div class="profile-hero-identity">
-            <h2 class="profile-student-name">${user ? user.name : 'Campus Scholar'}</h2>
+            <h2 class="profile-student-name">${studentName}</h2>
             <div class="profile-hero-pills-row">
-              <span class="profile-reg-badge font-mono">${user ? user.regNo : ''}</span>
+              <span class="profile-reg-badge font-mono">${studentRegNo}</span>
               <span class="profile-status-pill">Active Scholar</span>
             </div>
-            <p class="profile-hero-dept">${user ? user.department : 'Engineering & Technology'}</p>
+            <p class="profile-hero-dept">${studentDept}</p>
           </div>
 
           <!-- Header Action Buttons -->
@@ -758,7 +777,7 @@ export function renderProfileScreen(container, navigateTo) {
                 <span class="p-key-icon">👤</span>
                 <span>Student Name</span>
               </div>
-              <strong class="p-info-value">${user ? user.name : '—'}</strong>
+              <strong class="p-info-value">${studentName}</strong>
             </div>
 
             <div class="p-info-row">
@@ -766,7 +785,7 @@ export function renderProfileScreen(container, navigateTo) {
                 <span class="p-key-icon">🆔</span>
                 <span>Registration Number</span>
               </div>
-              <strong class="p-info-value font-mono">${user ? user.regNo : '—'}</strong>
+              <strong class="p-info-value font-mono">${studentRegNo}</strong>
             </div>
 
             <div class="p-info-row">
@@ -774,7 +793,7 @@ export function renderProfileScreen(container, navigateTo) {
                 <span class="p-key-icon">🏛️</span>
                 <span>Department</span>
               </div>
-              <span class="p-info-value">${user ? user.department : 'Engineering & Technology'}</span>
+              <span class="p-info-value">${studentDept}</span>
             </div>
 
             <div class="p-info-row">
@@ -798,7 +817,7 @@ export function renderProfileScreen(container, navigateTo) {
                 <span class="p-key-icon">📱</span>
                 <span>Contact Phone</span>
               </div>
-              <span class="p-info-value font-mono">${user && user.phone ? user.phone : '+91 94432 00000'}</span>
+              <span class="p-info-value font-mono">${studentPhone}</span>
             </div>
 
             <div class="p-info-row">
@@ -806,7 +825,7 @@ export function renderProfileScreen(container, navigateTo) {
                 <span class="p-key-icon">🛡️</span>
                 <span>Account Role</span>
               </div>
-              <span class="p-info-value text-emerald font-bold">${user ? user.role.toUpperCase() : 'STUDENT'}</span>
+              <span class="p-info-value text-emerald font-bold">${studentRole}</span>
             </div>
           </div>
         </section>

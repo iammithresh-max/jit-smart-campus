@@ -1,0 +1,81 @@
+﻿=============================================================
+  JITORA SMART CAMPUS — UPGRADE & LIFECYCLE TEST SUITE       
+=============================================================
+
+--- 1. STUDENT LOGIN & EMPTY ACTIVE TOKEN DISPLAY ---
+[PASS] Student authenticated
+[PASS] Navigated to Home screen
+[PASS] Active Token card is hidden/not in DOM when student has zero active orders (No stale token)
+[PASS] Stale token S-013 is NOT displayed anywhere on fresh login
+
+--- 2. CANTEEN POD ORDER CREATION ---
+[PASS] Pay on Delivery method card found
+[PASS] Dynamic button shows 'Place Order · Pay on Delivery'
+[PASS] Student has 1 active placed order
+[PASS] Canteen order token begins with 'C-'
+[PASS] Canteen order status is PLACED
+[PASS] Canteen payment status is NOT PAID
+[PASS] Active Token card is now visible on Home
+[PASS] Active Token card displays correct token C-025
+
+--- 3. STATIONERY POD ORDER CREATION ---
+[PASS] Student now has 2 active placed orders
+[PASS] Stationery order token begins with 'S-'
+[PASS] Stationery queue is separated from canteen queue
+
+--- 4. WORKER AUTHENTICATION & SHOP ISOLATION ---
+[PASS] Canteen worker JIT-W001 authenticated
+[PASS] Assigned shop is strictly canteen
+[PASS] Canteen worker blocked from modifying Stationery order
+[PASS] Cross-shop order manipulation prevented
+[PASS] Stationery worker blocked from modifying Canteen order
+[PASS] Cross-shop order manipulation prevented for stationery worker
+
+--- 5. ORDER LIFECYCLE WORKFLOW & AUDIT TRAIL ---
+[PASS] Canteen order confirmed successfully
+[PASS] Worker ID recorded in audit trail
+[PASS] Status history includes PLACED and Confirmed
+[PASS] Duplicate transition to 'Confirmed' blocked
+[PASS] Duplicate transition prevented
+[PASS] Status advanced to Preparing
+[PASS] Status advanced to Ready for Pickup
+[PASS] Payment remains strictly NOT PAID before physical cash receipt
+[PASS] Worker collected physical cash payment
+[PASS] Payment status is now PAID
+[PASS] Order status is still Ready for Pickup (payment and fulfillment remain decoupled)
+[PASS] Order marked as Completed
+
+--- 6. IMMEDIATE TOKEN REMOVAL AFTER COLLECTION ---
+[PASS] Only 1 active order remaining for student
+[PASS] Active order is stationery order
+
+--- 7. MANDATORY REJECTION REASON ENFORCEMENT ---
+[PASS] Empty rejection reason rejected with error
+[PASS] Rejection without reason blocked
+[PASS] Order rejected successfully
+[PASS] Rejection reason stored on order
+[PASS] Audit history records rejection
+[PASS] Student now has ZERO active orders
+[PASS] Home active token card is completely removed from DOM when all orders are finished/rejected
+[PASS] Navigated to My Orders screen
+[PASS] Order history contains completed canteen order JIT-ORD-475496
+[PASS] Order history contains rejected stationery order JIT-ORD-475501
+[PASS] Order history shows token C-025
+[PASS] Order history shows token S-013
+
+--- 8. GOOGLE PAY & UPI INTENT FLOW ---
+[PASS] Google Pay card exists
+[PASS] Button label is 'Pay ₹20 with Google Pay'
+[PASS] UPI intent modal displayed
+[PASS] Modal title is 'Google Pay UPI Intent' (NOT broken Merchant Gateway Notice)
+[PASS] Modal displays configured merchant UPI ID iammithresh@oksbi
+[PASS] Launch UPI link exists with 'upi://pay' scheme
+[PASS] UPI link contains merchant VPA iammithresh@oksbi
+[PASS] UPI link contains actual amount 20.00
+[PASS] Zero fake sandbox payment verification button in modal
+[PASS] Working 'Switch to Pay on Delivery' button exists in UPI modal
+[PASS] Switching to POD creates order and opens POD confirmation
+
+=============================================================
+  ALL UPGRADE TESTS COMPLETED: 58 PASSED, 0 FAILED  
+=============================================================

@@ -5,17 +5,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="JIT SMART CAMPUS - Mobile-First Canteen & Stationery Crowd Management System for Jansons Institute of Technology. Order food, buy academic supplies, upload PDFs for printing, and collect with queue-based tokens.">
   <meta name="theme-color" content="#0F172A">
-  <title>JIT SMART CAMPUS | Mobile-First Crowd Management System</title>
+  <title>JITORA - JIT SMART CAMPUS | Your Campus. Your Convenience.</title>
   
   <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <link rel="icon" type="image/png" href="assets/jitora-logo.png">
+  <link rel="apple-touch-icon" href="assets/jitora-logo.png">
+  <link rel="preload" as="image" href="assets/jitora-logo.png">
+  
   <!-- Application CSS -->
   <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Immediate critical style to prevent any blank screen or white flash -->
+  <style id="jitora-splash-critical">
+    #jitora-splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      background: #FFFFFF;
+      z-index: 9999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+  </style>
 </head>
 <body>
+  <!-- ==========================================================================
+       JITORA ANIMATED OPENING SPLASH SCREEN
+       First visual visitors see. Clean white backdrop, smooth original logo zoom,
+       dual blue/orange ambient glow, light sweep sheen, tagline, and skip option.
+       ========================================================================== -->
+  <div id="jitora-splash-screen" class="jitora-splash-screen" role="dialog" aria-modal="true" aria-label="JITORA Welcome Splash Screen">
+    <!-- Top-Right Skip Intro Button -->
+    <button type="button" class="splash-skip-btn" id="splash-skip-btn" aria-label="Skip introduction and proceed to app">
+      <span>Skip Intro</span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="5 4 15 12 5 20 5 4"></polygon>
+        <line x1="19" y1="5" x2="19" y2="19"></line>
+      </svg>
+    </button>
+
+    <div class="splash-main-content">
+      <!-- Ambient Blue and Orange Dual Glow (behind logo) -->
+      <div class="splash-glow-halo" aria-hidden="true"></div>
+
+      <!-- Exact Logo Wrapper with High-Gloss Sheen Sweep -->
+      <div class="splash-logo-container">
+        <img 
+          src="assets/jitora-logo.png" 
+          alt="JITORA - Your Campus. Your Convenience." 
+          class="splash-logo-image" 
+          id="splash-logo-image"
+          width="280"
+          height="280"
+          decoding="sync"
+          loading="eager"
+        />
+        <div class="splash-sheen-sweep" aria-hidden="true"></div>
+      </div>
+
+      <!-- Tagline: "Your Campus. Your Convenience." -->
+      <div class="splash-tagline-container">
+        <p class="splash-tagline-text">
+          <span class="tagline-part-1">Your Campus.</span>
+          <span class="tagline-separator">•</span>
+          <span class="tagline-part-2">Your Convenience.</span>
+        </p>
+      </div>
+
+      <!-- Subtle Progress Indicator for ~3s visual pacing -->
+      <div class="splash-progress-track" aria-hidden="true">
+        <div class="splash-progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ==========================================================================
        DESKTOP SIMULATOR WRAPPER
        Provides demonstration viewport switching (320px, 360px, 375px, 390px, 412px, 430px, Full)
@@ -26,7 +101,7 @@
     <header class="simulator-top-toolbar" role="region" aria-label="Viewport Screen Switcher">
       <div class="toolbar-brand-title">
         <span class="brand-dot"></span>
-        <span>JIT SMART CAMPUS • MOBILE PREVIEW</span>
+        <span><strong style="color: #60A5FA;">JIT</strong><strong style="color: #FB923C;">ORA</strong> • MOBILE PREVIEW</span>
       </div>
 
       <div class="viewport-presets-group">

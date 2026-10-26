@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JITORA Full Stack Lifecycle & Upgrade Test</title>
+</head>
+<body>
+  <div id="results" style="font-family: monospace; white-space: pre; padding: 20px;">Running Upgrade Tests...</div>
+
+  <div class="mobile-viewport" style="display: none;">
+    <div id="mobile-app-screen" class="mobile-app-screen"></div>
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+      <a href="#home" class="nav-item active" id="nav-btn-home" data-screen="home"><div class="nav-icon"></div><span class="nav-label">Home</span></a>
+      <a href="#canteen" class="nav-item" id="nav-btn-canteen" data-screen="canteen"><div class="nav-icon"></div><span class="nav-label">Canteen</span></a>
+      <a href="#stationery" class="nav-item" id="nav-btn-stationery" data-screen="stationery"><div class="nav-icon"></div><span class="nav-label">Stationery</span></a>
+      <a href="#history" class="nav-item" id="nav-btn-history" data-screen="history"><div class="nav-icon"></div><span class="nav-label">My Orders</span></a>
+      <a href="#profile" class="nav-item" id="nav-btn-profile" data-screen="profile"><div class="nav-icon"></div><span class="nav-label">Profile</span></a>
+    </nav>
+    <div id="jit-toast-notification" class="jit-toast"></div>
+  </div>
+
+  <script>
+    window.__ERRORS = [];
+    window.addEventListener('error', function(e) {
+      window.__ERRORS.push(e.message + ' at ' + e.filename + ':' + e.lineno);
+      var res = document.getElementById('results');
+      if (res) res.textContent += '\nWINDOW ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno;
+      try {
+        fetch('http://localhost:5505/', { method: 'POST', body: 'WINDOW ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno });
+      } catch (err) {}
+    });
+  </script>
+
+  <script type="module">
+    import { 
+      initStorage, 
+      getAllOrders, 
+      getOrdersByStudent,
+      createVerifiedOrder,
+      updateOrderStatus,
+      recordPodPaymentCollection,
+      clearSession, 
+      setSafeSession,
+      getSafeSession
+    } from './js/storage.js';
+    import { authenticateStudent, authenticateWorker, logout } from './js/auth.js';
+    import { navigateTo, getCurrentScreen, setupGlobalNavigationEvents } from './js/app.js';
+    import { APP_CONFIG, DEMO_WORKER_ACCOUNTS } from './js/data.js';
+
+    const log = [];
+    let passCount = 0;
+    let failCount = 0;
+
+    function assert(desc, condition) {
+      if (condition) {
+        log.push(`[PASS] ${desc}`);
+        passCount++;
+      } else {
+        log.push(`[FAIL] ${desc}`);
+        failCount++;
+        console.error(`Assertion failed: ${desc}`);
+      }
+    }
+
+    async function runTests() {
+      try {
+        log.push("=============================================================");
+        log.push("  JITORA SMART CAMPUS — UPGRADE & LIFECYCLE TEST SUITE       ");
+        log.push("=============================================================\n");
+
+        initStorage();
+        setupGlobalNavigationEvents();
+        const appScreen = document.getElementById('mobile-app-screen');
+
+        // Clean out existing orders from storage for clean test run
+        localStorage.setItem('jit_campus_orders', JSON.stringify([]));
+
+        // -----------------------------------------------------------------
+        // TEST 1: STUDENT AUTH & CLEAN HOME (NO STALE TOKEN S-013)
+        // -----------------------------------------------------------------
+        log.push("--- 1. STUDENT LOGIN & EMPTY ACTIVE TOKEN DISPLAY ---");
+        const student = await authenticateStudent('711125104066', '04-11-2007');
+        assert("Student authenticated", student && student.regNo === '711125104066');
+
+        navigateTo('home');
+        assert("Navigated to Home screen", getCurrentScreen() === 'home');
+
+        const activeTokenCard = appScreen.querySelector('#home-quick-active-token');
+        assert("Active Token card is hidden/not in DOM when student has zero active orders (No stale token)", 
+          activeTokenCard === null);
+        assert("Stale token S-013 is NOT displayed anywhere on fresh login", 
+          !appScreen.textContent.includes('S-013'));
+
+        // -----------------------------------------------------------------
+        // TEST 2: CANTEEN ORDER CREATION (PAY ON DELIVERY)
+        // -----------------------------------------------------------------
+        log.push("\n--- 2. CANTEEN POD ORDER CREATION ---");
+        navigateTo('payment', {
+          shop: 'canteen',
+          items: [{ id: 'food_1', name: 'Crispy Ghee Podi Dosa', price: 45, quantity: 2, shop: 'canteen' }],
+          totalAmount: 90,
+          specialNotes: 'Extra chutney'
+        });
+
+        // Select Pay on Delivery
+        const podMethodCard = appScreen.querySelector('[data-method-id="counter"]');
+        assert("Pay on Delivery method card found", podMethodCard !== null);
+        podMethodCard.click();
+
+        const payBtn = appScreen.querySelector('#btn-execute-payment');
+        assert("Dynamic button shows 'Place Order · Pay on Delivery'", 
+          appScreen.querySelector('#btn-pay-label').textContent.trim() === 'Place Order · Pay on Delivery');
+        payBtn.click();
+
+        // Verify order created in system
+        const studentOrders = getOrdersByStudent('711125104066');
+        const activeCanteenOrders = studentOrders.filter(o => !['completed', 'collected', 'cancelled', 'rejected'].includes((o.status||'').toLowerCase()));
+        assert("Student has 1 active placed order", activeCanteenOrders.length === 1);
+        const canteenOrder = activeCanteenOrders[0];
+        assert("Canteen order token begins with 'C-'", canteenOrder.token.startsWith('C-'));
+        assert("Canteen order status is PLACED", canteenOrder.status === 'PLACED');
+        assert("Canteen payment status is NOT PAID", canteenOrder.payment.status === 'NOT PAID');
+
+        // Check Home screen now shows the active token
+        navigateTo('home');
+        const updatedTokenCard = appScreen.querySelector('#home-quick-active-token');
+        assert("Active Token card is now visible on Home", updatedTokenCard !== null);
+        assert("Active Token card displays correct token " + canteenOrder.token, 
+          updatedTokenCard.textContent.includes(canteenOrder.token));
+
+        // -----------------------------------------------------------------
+        // TEST 3: STATIONERY ORDER CREATION
+        // -----------------------------------------------------------------
+        log.push("\n--- 3. STATIONERY POD ORDER CREATION ---");
+        navigateTo('payment', {
+          shop: 'stationery',
+          items: [{ id: 'stat_1', name: 'Classmate 192-Page Ruled Notebook', price: 65, quantity: 1, shop: 'stationery' }],
+          totalAmount: 65,
+          specialNotes: 'Ruled'
+        });
+
+        appScreen.querySelector('[data-method-id="counter"]').click();
+        appScreen.querySelector('#btn-execute-payment').click();
+
+        const studentOrders2 = getOrdersByStudent('711125104066');
+        const activeOrders2 = studentOrders2.filter(o => !['completed', 'collected', 'cancelled', 'rejected'].includes((o.status||'').toLowerCase()));
+        assert("Student now has 2 active placed orders", activeOrders2.length === 2);
+        const statOrder = activeOrders2.find(o => o.shop === 'stationery');
+        assert("Stationery order token begins with 'S-'", statOrder && statOrder.token.startsWith('S-'));
+        assert("Stationery queue is separated from canteen queue", statOrder && statOrder.token !== canteenOrder.token);
+
+        // -----------------------------------------------------------------
+        // TEST 4: WORKER SHOP ISOLATION (CANTEEN VS STATIONERY)
+        // -----------------------------------------------------------------
+        log.push("\n--- 4. WORKER AUTHENTICATION & SHOP ISOLATION ---");
+        clearSession();
+
+        // 4.1 Canteen Worker JIT-W001
+        const canteenWorker = await authenticateWorker('JIT-W001', 'demo123');
+        assert("Canteen worker JIT-W001 authenticated", canteenWorker && canteenWorker.empId === 'JIT-W001');
+        assert("Assigned shop is strictly canteen", canteenWorker.assignedShop === 'canteen');
+
+        // Worker attempts to update stationery order -> MUST FAIL
+        let crossShopFailed = false;
+        try {
+          updateOrderStatus(statOrder.orderId, 'Confirmed', canteenWorker);
+        } catch (e) {
+          crossShopFailed = true;
+          assert("Canteen worker blocked from modifying Stationery order", 
+            e.message.includes('Unauthorized') || e.message.includes('cannot modify'));
+        }
+        assert("Cross-shop order manipulation prevented", crossShopFailed);
+
+        // 4.2 Stationery Worker JIT-W003
+        const statWorker = await authenticateWorker('JIT-W003', 'demo123');
+        let crossShopFailed2 = false;
+        try {
+          updateOrderStatus(canteenOrder.orderId, 'Confirmed', statWorker);
+        } catch (e) {
+          crossShopFailed2 = true;
+          assert("Stationery worker blocked from modifying Canteen order", 
+            e.message.includes('Unauthorized') || e.message.includes('cannot modify'));
+        }
+        assert("Cross-shop order manipulation prevented for stationery worker", crossShopFailed2);
+
+        // -----------------------------------------------------------------
+        // TEST 5: ORDER LIFECYCLE (CONFIRM -> PREPARING -> READY -> COMPLETED)
+        // -----------------------------------------------------------------
+        log.push("\n--- 5. ORDER LIFECYCLE WORKFLOW & AUDIT TRAIL ---");
+        // Confirm canteen order by canteen worker
+        const confirmedOrder = updateOrderStatus(canteenOrder.orderId, 'Confirmed', canteenWorker);
+        assert("Canteen order confirmed successfully", confirmedOrder.status === 'Confirmed');
+        assert("Worker ID recorded in audit trail", confirmedOrder.responsibleWorkerId === 'JIT-W001');
+        assert("Status history includes PLACED and Confirmed", confirmedOrder.statusHistory.length >= 2);
+
+        // Prevent duplicate transition
+        let dupTransitionFailed = false;
+        try {
+          updateOrderStatus(canteenOrder.orderId, 'Confirmed', canteenWorker);
+        } catch (e) {
+          dupTransitionFailed = true;
+          assert("Duplicate transition to 'Confirmed' blocked", e.message.includes('already in Confirmed state'));
+        }
+        assert("Duplicate transition prevented", dupTransitionFailed);
+
+        // Advance to Preparing
+        const prepOrder = updateOrderStatus(canteenOrder.orderId, 'Preparing', canteenWorker);
+        assert("Status advanced to Preparing", prepOrder.status === 'Preparing');
+
+        // Advance to Ready for Pickup
+        const readyOrder = updateOrderStatus(canteenOrder.orderId, 'Ready for Pickup', canteenWorker);
+        assert("Status advanced to Ready for Pickup", readyOrder.status === 'Ready for Pickup');
+
+        // Verify payment is still NOT PAID until collected
+        assert("Payment remains strictly NOT PAID before physical cash receipt", 
+          readyOrder.payment.status === 'NOT PAID');
+
+        // Collect cash payment at counter
+        const collectionResult = recordPodPaymentCollection(canteenOrder.orderId, canteenWorker);
+        assert("Worker collected physical cash payment", collectionResult.success === true);
+        const paidOrder = getAllOrders().find(o => o.orderId === canteenOrder.orderId);
+        assert("Payment status is now PAID", paidOrder.payment.status === 'PAID');
+        assert("Order status is still Ready for Pickup (payment and fulfillment remain decoupled)", 
+          paidOrder.status === 'Ready for Pickup');
+
+        // Advance to Completed / Collected
+        const completedOrder = updateOrderStatus(canteenOrder.orderId, 'Completed', canteenWorker);
+        assert("Order marked as Completed", completedOrder.status === 'Completed');
+
+        // -----------------------------------------------------------------
+        // TEST 6: COMPLETED TOKEN REMOVAL FROM STUDENT ACTIVE DISPLAY
+        // -----------------------------------------------------------------
+        log.push("\n--- 6. IMMEDIATE TOKEN REMOVAL AFTER COLLECTION ---");
+        // Log back in as student
+        setSafeSession(student);
+        navigateTo('home');
+
+        // Now, only stationery order (statOrder) is active; canteenOrder is Completed.
+        // Active token banner should display stationery order token, NOT completed canteen order token!
+        const activeOrders = getOrdersByStudent('711125104066').filter(o => 
+          !['completed', 'collected', 'cancelled', 'rejected'].includes(o.status.toLowerCase())
+        );
+        assert("Only 1 active order remaining for student", activeOrders.length === 1);
+        assert("Active order is stationery order", activeOrders[0].orderId === statOrder.orderId);
+
+        // -----------------------------------------------------------------
+        // TEST 7: MANDATORY REJECTION REASON WORKFLOW
+        // -----------------------------------------------------------------
+        log.push("\n--- 7. MANDATORY REJECTION REASON ENFORCEMENT ---");
+        // Rejecting stationery order without reason must fail
+        let emptyRejectionFailed = false;
+        try {
+          updateOrderStatus(statOrder.orderId, 'Rejected', statWorker, '');
+        } catch (e) {
+          emptyRejectionFailed = true;
+          assert("Empty rejection reason rejected with error", 
+            e.message.includes('mandatory rejection reason'));
+        }
+        assert("Rejection without reason blocked", emptyRejectionFailed);
+
+        // Reject with valid reason
+        const rejectedOrder = updateOrderStatus(statOrder.orderId, 'Rejected', statWorker, 'Out of stock - Notebooks restocking tomorrow');
+        assert("Order rejected successfully", rejectedOrder.status === 'Rejected');
+        assert("Rejection reason stored on order", 
+          rejectedOrder.rejectionReason === 'Out of stock - Notebooks restocking tomorrow');
+        assert("Audit history records rejection", 
+          rejectedOrder.statusHistory.some(h => h.status === 'Rejected' && h.reason));
+
+        // Check student active orders now
+        const activeAfterReject = getOrdersByStudent('711125104066').filter(o => 
+          !['completed', 'collected', 'cancelled', 'rejected'].includes(o.status.toLowerCase())
+        );
+        assert("Student now has ZERO active orders", activeAfterReject.length === 0);
+
+        navigateTo('home');
+        const tokenCardFinal = appScreen.querySelector('#home-quick-active-token');
+        assert("Home active token card is completely removed from DOM when all orders are finished/rejected", 
+          tokenCardFinal === null);
+
+        // Verify Order History retains both orders for reference
+        navigateTo('history');
+        assert("Navigated to My Orders screen", getCurrentScreen() === 'history');
+        const historyText = appScreen.textContent;
+        assert("Order history contains completed canteen order " + canteenOrder.orderId, 
+          historyText.includes(canteenOrder.orderId));
+        assert("Order history contains rejected stationery order " + statOrder.orderId, 
+          historyText.includes(statOrder.orderId));
+        assert("Order history shows token " + canteenOrder.token, historyText.includes(canteenOrder.token));
+        assert("Order history shows token " + statOrder.token, historyText.includes(statOrder.token));
+
+        // -----------------------------------------------------------------
+        // TEST 8: GOOGLE PAY & UPI INTENT MODAL (NO BROKEN MERCHANT NOTICE)
+        // -----------------------------------------------------------------
+        log.push("\n--- 8. GOOGLE PAY & UPI INTENT FLOW ---");
+        navigateTo('payment', {
+          shop: 'canteen',
+          items: [{ id: 'food_1', name: 'Coffee', price: 20, quantity: 1, shop: 'canteen' }],
+          totalAmount: 20
+        });
+
+        // Select Google Pay
+        const gpayCard = appScreen.querySelector('[data-method-id="gpay"]');
+        assert("Google Pay card exists", gpayCard !== null);
+        gpayCard.click();
+
+        const payBtnGpay = appScreen.querySelector('#btn-execute-payment');
+        assert("Button label is 'Pay ₹20 with Google Pay'", 
+          appScreen.querySelector('#btn-pay-label').textContent.trim() === 'Pay ₹20 with Google Pay');
+        payBtnGpay.click();
+
+        const redirectModal = appScreen.querySelector('#app-redirect-modal');
+        assert("UPI intent modal displayed", redirectModal && redirectModal.style.display !== 'none');
+        assert("Modal title is 'Google Pay UPI Intent' (NOT broken Merchant Gateway Notice)", 
+          appScreen.querySelector('#pm-redirect-title').textContent.trim() === 'Google Pay UPI Intent');
+        assert("Modal displays configured merchant UPI ID " + APP_CONFIG.merchantUpiId, 
+          redirectModal.textContent.includes(APP_CONFIG.merchantUpiId));
+
+        const launchLink = appScreen.querySelector('#btn-launch-upi-intent');
+        assert("Launch UPI link exists with 'upi://pay' scheme", 
+          launchLink && launchLink.href.startsWith('upi://pay'));
+        assert("UPI link contains merchant VPA iammithresh@oksbi", 
+          launchLink.href.includes('iammithresh%40oksbi'));
+        assert("UPI link contains actual amount 20.00", 
+          launchLink.href.includes('am=20.00'));
+
+        assert("Zero fake sandbox payment verification button in modal", 
+          appScreen.querySelector('#btn-simulate-verified') === null);
+
+        // Test Switch to Pay on Delivery from modal
+        const switchToPodBtn = appScreen.querySelector('#btn-switch-to-pod');
+        assert("Working 'Switch to Pay on Delivery' button exists in UPI modal", switchToPodBtn !== null);
+        switchToPodBtn.click();
+
+        const podSuccessModal = appScreen.querySelector('#pod-success-modal');
+        assert("Switching to POD creates order and opens POD confirmation", 
+          podSuccessModal && podSuccessModal.style.display !== 'none');
+
+        log.push("\n=============================================================");
+        log.push(`  ALL UPGRADE TESTS COMPLETED: ${passCount} PASSED, ${failCount} FAILED  `);
+        log.push("=============================================================");
+
+      } catch (err) {
+        log.push(`\n[FATAL ERROR] ${err.message}\n${err.stack}`);
+        failCount++;
+      }
+
+      const resultsText = log.join('\n');
+      document.getElementById('results').textContent = resultsText;
+      console.log(resultsText);
+
+      try {
+        await fetch('http://localhost:5505/', { method: 'POST', body: resultsText });
+      } catch (e) {}
+
+      try {
+        await fetch('/report-test-results', { method: 'POST', body: resultsText });
+      } catch (e) {}
+    }
+
+    runTests();
+  </script>
+</body>
+</html>
